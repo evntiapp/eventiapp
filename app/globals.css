@@ -24,3 +24,82 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ── Onboarding animations ── */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulseOrb {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0  rgba(221,184,245,0.3); }
+  50%       { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(221,184,245,0); }
+}
+
+.animate-slide-in { animation: slideIn 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+
+/* Dashboard — hide scrollbar on body scroll area */
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* AI Plan page */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes spinOrb {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes pulseDot {
+  0%, 100% { box-shadow: 0 0 0 0   rgba(74,14,110,0.3); }
+  50%       { box-shadow: 0 0 0 6px rgba(74,14,110,0);   }
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.6; transform: scale(1);   }
+  50%       { opacity: 1;   transform: scale(1.1); }
+}
+
+/* Range input (budget slider) */
+.budget-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 4px;
+  background: #DDB8F5;
+  outline: none;
+  margin: 6px 0 16px;
+  cursor: pointer;
+}
+.budget-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #4A0E6E;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(74,14,110,0.3);
+}
+.budget-range::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #4A0E6E;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 8px rgba(74,14,110,0.3);
+}
