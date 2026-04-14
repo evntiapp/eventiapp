@@ -170,8 +170,8 @@ export default function SettingsPage() {
   const [notifFilter, setNotifFilter] = useState<NotifFilter>('all')
   const [toggles, setToggles] = useState({ push: true, email: true, ai: true, dark: false })
 
-  function flipToggle(key: keyof typeof toggles) {
-    setToggles(prev => ({ ...prev, [key]: !prev[key] }))
+  function flipToggle(key: string) {
+    setToggles(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }))
   }
 
   return (
