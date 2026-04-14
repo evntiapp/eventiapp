@@ -219,7 +219,6 @@ export default function BudgetPage() {
               style={{
                 fontFamily: 'var(--font-syne)',
                 color: activeTab === t.id ? '#4A0E6E' : '#7C6B8A',
-                borderBottom: activeTab === t.id ? '2px solid #4A0E6E' : '2px solid transparent',
                 background: 'transparent',
                 border: 'none',
                 borderBottom: activeTab === t.id ? '2px solid #4A0E6E' : '2px solid transparent',
