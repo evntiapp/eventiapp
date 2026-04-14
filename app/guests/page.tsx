@@ -198,7 +198,6 @@ export default function GuestsPage() {
               style={{
                 fontFamily: 'var(--font-syne)',
                 color: activeTab === t.id ? '#4A0E6E' : '#7C6B8A',
-                borderBottom: activeTab === t.id ? '2px solid #4A0E6E' : '2px solid transparent',
                 transition: 'all 0.2s',
                 background: 'transparent',
                 border: 'none',
