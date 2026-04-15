@@ -1,6 +1,12 @@
 'use client'
 import { useState } from 'react'
 import { Syne, Epilogue } from 'next/font/google'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 const syne = Syne({
   subsets: ['latin'],
@@ -17,10 +23,31 @@ export default function HomePage() {
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [focused, setFocused] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!email.trim()) return
+    setLoading(true)
+    setError(null)
+
+    const { error: dbError } = await supabase
+      .from('waitlist')
+      .insert({ email: email.trim().toLowerCase() })
+
+    setLoading(false)
+
+    if (dbError) {
+      // Postgres unique violation code
+      if (dbError.code === '23505') {
+        setError("You're already on the list. We'll be in touch soon.")
+      } else {
+        setError('Something went wrong. Please try again.')
+      }
+      return
+    }
+
     setSubmitted(true)
   }
 
@@ -181,7 +208,7 @@ export default function HomePage() {
                 <div style={{
                   display: 'flex',
                   background: 'rgba(255,255,255,0.04)',
-                  border: `1.5px solid ${focused ? 'rgba(201,168,76,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                  border: `1.5px solid ${error ? 'rgba(239,68,68,0.4)' : focused ? 'rgba(201,168,76,0.5)' : 'rgba(255,255,255,0.1)'}`,
                   borderRadius: '14px',
                   overflow: 'hidden',
                   transition: 'border-color 0.2s',
@@ -190,10 +217,11 @@ export default function HomePage() {
                     type="email"
                     required
                     value={email}
-                    onChange={e => setEmail(e.target.value)}
+                    onChange={e => { setEmail(e.target.value); setError(null) }}
                     onFocus={() => setFocused(true)}
                     onBlur={() => setFocused(false)}
                     placeholder="Enter your email address"
+                    disabled={loading}
                     style={{
                       flex: 1,
                       background: 'transparent',
@@ -203,10 +231,12 @@ export default function HomePage() {
                       fontSize: '15px',
                       color: 'white',
                       fontFamily: 'var(--font-epilogue)',
+                      opacity: loading ? 0.5 : 1,
                     }}
                   />
                   <button
                     type="submit"
+                    disabled={loading}
                     style={{
                       background: '#C9A84C',
                       color: '#0D0A12',
@@ -215,22 +245,29 @@ export default function HomePage() {
                       fontFamily: 'var(--font-syne)',
                       fontWeight: 700,
                       fontSize: '14px',
-                      cursor: 'pointer',
+                      cursor: loading ? 'not-allowed' : 'pointer',
                       whiteSpace: 'nowrap',
                       letterSpacing: '0.2px',
                       transition: 'opacity 0.2s',
                       margin: '6px',
                       borderRadius: '10px',
+                      opacity: loading ? 0.6 : 1,
                     }}
-                    onMouseOver={e => (e.currentTarget.style.opacity = '0.88')}
-                    onMouseOut={e => (e.currentTarget.style.opacity = '1')}
+                    onMouseOver={e => { if (!loading) e.currentTarget.style.opacity = '0.88' }}
+                    onMouseOut={e => { if (!loading) e.currentTarget.style.opacity = '1' }}
                   >
-                    Request Access
+                    {loading ? 'Joining...' : 'Request Access'}
                   </button>
                 </div>
-                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.25)', textAlign: 'center', letterSpacing: '0.1px' }}>
-                  No spam. Unsubscribe at any time.
-                </p>
+                {error ? (
+                  <p style={{ fontSize: '13px', color: 'rgba(239,100,100,0.9)', textAlign: 'center', letterSpacing: '0.1px', lineHeight: 1.5 }}>
+                    {error}
+                  </p>
+                ) : (
+                  <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.25)', textAlign: 'center', letterSpacing: '0.1px' }}>
+                    No spam. Unsubscribe at any time.
+                  </p>
+                )}
               </form>
             )}
           </div>
