@@ -3,6 +3,17 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Evnti brand tokens */
+  --plum:           #4A0E6E;
+  --plum-mid:       #6B1F9A;
+  --plum-deep:      #2D0845;
+  --lavender:       #DDB8F5;
+  --lavender-light: #F3E8FF;
+  --charcoal:       #1A1A2E;
+  --muted:          #7C6B8A;
+  --off-white:      #FAFAFA;
+  --green:          #0D9B6A;
 }
 
 @theme inline {
