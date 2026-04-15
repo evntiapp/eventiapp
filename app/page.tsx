@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import Image from 'next/image'
 import {
   Wand2, Cpu, ShieldCheck, Clock,
-  Check, Plus, Minus, TrendingUp, Star,
+  Check, Plus, TrendingUp, Star,
 } from 'lucide-react'
 
 const syne = Syne({
@@ -312,7 +312,7 @@ export default function HomePage() {
             zIndex: 2,
           }} />
           {/* Hero image */}
-          <Image src="/images/Hero.jpg" alt="Elegant event setup" fill className="object-cover brightness-75 saturate-90" />
+          <Image src="/images/Hero.jpg" alt="Elegant event setup" fill sizes="50vw" loading="eager" className="object-cover brightness-75 saturate-90" />
           {/* Gradient overlay */}
           <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: 'linear-gradient(to right, var(--plum-deep) 0%, transparent 40%)' }} />
 
@@ -486,7 +486,7 @@ export default function HomePage() {
                 style={{ aspectRatio: '4/3' }}
               >
                 {/* Category image */}
-                <Image src={cat.img} alt={cat.label} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                <Image src={cat.img} alt={cat.label} fill sizes="25vw" className="object-cover transition-transform duration-500 group-hover:scale-105" />
                 {/* Dark overlay */}
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(26,10,46,0.85) 0%, transparent 55%)' }} />
                 <span style={{ position: 'absolute', bottom: '1rem', left: '1rem', fontFamily: 'var(--font-syne)', fontSize: '0.9rem', fontWeight: 600, color: 'white' }}>
@@ -519,7 +519,7 @@ export default function HomePage() {
       <div className="grid grid-cols-1 lg:grid-cols-2" style={{ minHeight: 580 }}>
         {/* Left — feature image */}
         <div className="relative" style={{ minHeight: 320 }}>
-          <Image src="/images/feature.jpg" alt="AI-powered event planning in action" fill className="object-cover" />
+          <Image src="/images/feature.jpg" alt="AI-powered event planning in action" fill sizes="50vw" className="object-cover" />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 55%, var(--plum-deep) 100%)' }} />
         </div>
 
