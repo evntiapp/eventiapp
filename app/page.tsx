@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { createClient } from '@supabase/supabase-js'
+import Image from 'next/image'
 import {
   Wand2, Cpu, ShieldCheck, Clock,
   Check, Plus, Minus, TrendingUp, Star,
@@ -40,13 +41,13 @@ const STEPS = [
 ]
 
 const CATS = [
-  { label: 'Venues',           count: '142 listed', bg: '#3D1A5C' },
-  { label: 'Photographers',    count: '89 listed',  bg: '#1E2D5C' },
-  { label: 'Catering',         count: '67 listed',  bg: '#0D4A35' },
-  { label: 'Music & DJs',      count: '53 listed',  bg: '#4A2D0D' },
-  { label: 'Florists',         count: '44 listed',  bg: '#2A3D0D' },
-  { label: 'Cakes & Desserts', count: '38 listed',  bg: '#4A0D2D' },
-  { label: 'Beauty & Hair',    count: '61 listed',  bg: '#0D2D4A' },
+  { label: 'Venues',           count: '142 listed', img: '/images/venues.jpg' },
+  { label: 'Photographers',    count: '89 listed',  img: '/images/photographers.jpg' },
+  { label: 'Catering',         count: '67 listed',  img: '/images/catering.jpg' },
+  { label: 'Music & DJs',      count: '53 listed',  img: '/images/music.jpg' },
+  { label: 'Florists',         count: '44 listed',  img: '/images/florists.jpg' },
+  { label: 'Cakes & Desserts', count: '38 listed',  img: '/images/cakes.jpg' },
+  { label: 'Beauty & Hair',    count: '61 listed',  img: '/images/beauty.jpg' },
 ]
 
 const FEAT_LIST = [
@@ -310,10 +311,10 @@ export default function HomePage() {
             clipPath: 'polygon(0 0, 100% 0, 40% 100%, 0 100%)',
             zIndex: 2,
           }} />
+          {/* Hero image */}
+          <Image src="/images/Hero.jpg" alt="Elegant event setup" fill className="object-cover brightness-75 saturate-90" />
           {/* Gradient overlay */}
           <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: 'linear-gradient(to right, var(--plum-deep) 0%, transparent 40%)' }} />
-          {/* Placeholder image bg */}
-          <div style={{ position: 'absolute', inset: 0, background: 'var(--plum-mid)', opacity: 0.7 }} />
 
           {/* Floating budget card */}
           <div style={{
@@ -484,8 +485,8 @@ export default function HomePage() {
                 className="relative overflow-hidden rounded-[18px] cursor-pointer group"
                 style={{ aspectRatio: '4/3' }}
               >
-                {/* Placeholder bg */}
-                <div style={{ position: 'absolute', inset: 0, background: cat.bg, transition: 'transform 0.4s' }} className="group-hover:scale-105" />
+                {/* Category image */}
+                <Image src={cat.img} alt={cat.label} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
                 {/* Dark overlay */}
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(26,10,46,0.85) 0%, transparent 55%)' }} />
                 <span style={{ position: 'absolute', bottom: '1rem', left: '1rem', fontFamily: 'var(--font-syne)', fontSize: '0.9rem', fontWeight: 600, color: 'white' }}>
@@ -516,9 +517,9 @@ export default function HomePage() {
 
       {/* ── 6. FEATURE SPLIT ───────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2" style={{ minHeight: 580 }}>
-        {/* Left — placeholder image */}
+        {/* Left — feature image */}
         <div className="relative" style={{ minHeight: 320 }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'var(--plum-mid)', opacity: 0.65 }} />
+          <Image src="/images/feature.jpg" alt="AI-powered event planning in action" fill className="object-cover" />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 55%, var(--plum-deep) 100%)' }} />
         </div>
 
