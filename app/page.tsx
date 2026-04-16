@@ -150,42 +150,55 @@ export default function HomePage() {
               onMouseOut={e => (e.currentTarget.style.color = 'var(--muted)')}
             >{l}</a>
           ))}
+          <a
+            href="/auth/signin"
+            style={{ fontSize: '0.875rem', fontWeight: 400, color: 'var(--muted)', textDecoration: 'none', transition: 'color 0.2s' }}
+            onMouseOver={e => (e.currentTarget.style.color = 'var(--plum)')}
+            onMouseOut={e => (e.currentTarget.style.color = 'var(--muted)')}
+          >Sign in</a>
         </div>
 
-        <a
-          href="#waitlist"
-          className="hidden md:inline-block"
+        <button
+          className="hidden md:inline-block border-none cursor-pointer"
           style={{
             background: 'var(--plum)', color: 'var(--off-white)',
             borderRadius: '100px', padding: '0.6rem 1.4rem',
             fontFamily: 'var(--font-space)', fontSize: '0.85rem', fontWeight: 500,
-            textDecoration: 'none', transition: 'background 0.2s',
+            transition: 'background 0.2s',
           }}
+          onClick={() => document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' })}
           onMouseOver={e => (e.currentTarget.style.background = 'var(--plum-mid)')}
           onMouseOut={e => (e.currentTarget.style.background = 'var(--plum)')}
         >
           Join waitlist
-        </a>
+        </button>
 
         {/* Mobile CTA */}
-        <a
-          href="#waitlist"
-          className="md:hidden"
+        <button
+          className="md:hidden border-none cursor-pointer"
           style={{
             background: 'var(--plum)', color: 'var(--off-white)',
             borderRadius: '100px', padding: '0.5rem 1rem',
-            fontSize: '0.8rem', fontWeight: 500, textDecoration: 'none',
+            fontSize: '0.8rem', fontWeight: 500,
           }}
+          onClick={() => document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' })}
         >
           Join
-        </a>
+        </button>
       </nav>
 
       {/* ── 2. HERO ────────────────────────────────────────────────────────── */}
       <section
-        className="grid grid-cols-1 md:grid-cols-2 min-h-screen"
+        id="waitlist"
+        className="relative grid grid-cols-1 md:grid-cols-2 min-h-screen"
         style={{ background: 'var(--plum-deep)' }}
       >
+        {/* Mobile background image — hidden on md+ (right col takes over) */}
+        <div className="absolute inset-0 md:hidden" style={{ zIndex: 0 }}>
+          <Image src="/images/Hero.jpg" alt="" fill sizes="100vw" priority className="object-cover" />
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,10,46,0.72)' }} />
+        </div>
+
         {/* Left */}
         <div
           className="flex flex-col justify-center px-8 md:px-14 py-32 md:py-40"
@@ -227,7 +240,7 @@ export default function HomePage() {
           </p>
 
           {/* Hero form */}
-          <div id="waitlist" style={{ maxWidth: 420 }}>
+          <div style={{ maxWidth: 420 }}>
             {hero.submitted ? (
               <div
                 className="flex flex-col items-center gap-3 text-center"
