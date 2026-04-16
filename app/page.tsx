@@ -475,7 +475,7 @@ export default function HomePage() {
               </h2>
             </div>
             <a
-              href="#"
+              href="/vendors"
               style={{
                 background: 'transparent', border: '1.5px solid var(--plum)',
                 color: 'var(--plum)', borderRadius: '100px',
@@ -589,7 +589,7 @@ export default function HomePage() {
                 List your services, get matched with clients who fit your niche and budget, and manage all your bookings from one clean dashboard.
               </p>
               <a
-                href="#"
+                href="/vendor/apply"
                 style={{
                   display: 'inline-block', background: 'var(--plum)', color: 'white',
                   borderRadius: '100px', padding: '0.8rem 2rem',
@@ -827,11 +827,11 @@ export default function HomePage() {
               <h4 style={{ fontFamily: 'var(--font-syne)', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginBottom: '0.875rem' }}>
                 Vendors
               </h4>
-              {['Apply as vendor', 'Vendor dashboard', 'Success stories'].map(l => (
-                <a key={l} href="#" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 300, color: 'rgba(255,255,255,0.5)', textDecoration: 'none', marginBottom: '0.5rem', transition: 'color 0.2s' }}
+              {[{ label: 'Apply as vendor', href: '/vendor/apply' }, { label: 'Vendor dashboard', href: '#' }, { label: 'Success stories', href: '#' }].map(({ label, href }) => (
+                <a key={label} href={href} style={{ display: 'block', fontSize: '0.85rem', fontWeight: 300, color: 'rgba(255,255,255,0.5)', textDecoration: 'none', marginBottom: '0.5rem', transition: 'color 0.2s' }}
                   onMouseOver={e => (e.currentTarget.style.color = 'var(--lavender)')}
                   onMouseOut={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.5)')}
-                >{l}</a>
+                >{label}</a>
               ))}
             </div>
             {/* Company */}

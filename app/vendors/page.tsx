@@ -1,451 +1,552 @@
 'use client'
 
-import { useState } from 'react'
-import { Syne, Epilogue } from 'next/font/google'
+import { useState, useEffect, useMemo } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { Syne, Space_Grotesk } from 'next/font/google'
+import { getSupabaseClient } from '@/lib/supabase'
 
 const syne = Syne({
   subsets: ['latin'],
   weight: ['400', '600', '700', '800'],
-  variable: '--font-syne',
+  variable: '--font-syne-vl',
 })
-
-const epilogue = Epilogue({
+const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600'],
-  variable: '--font-epilogue',
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-space-vl',
 })
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-interface GridVendor {
-  icon: string; imgBg: string; category: string; name: string
-  stars: string; rating: number; price: string
-  verified: string; match?: number
+interface VendorProfile {
+  id: string
+  business_name: string
+  location: string
+  category: string
+  description: string | null
+  pricing_from: number | null
+  pricing_to: number | null
+  is_verified: boolean
+  application_status: string
+  rating_average?: number | null
+  review_count?: number | null
 }
 
-interface ListVendor {
-  icon: string; imgBg: string; name: string; category: string
-  match: number; tags: string[]; stars: string
-  rating: number; reviews: number; price: string
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const CATEGORY_PILLS = [
+  'All',
+  'Venues',
+  'Photography',
+  'Catering',
+  'DJ / Music',
+  'Florals',
+  'Cakes & Desserts',
+  'Beauty & Hair',
+  'Videography',
+  'Decor',
+  'Photo Booth',
+]
+
+// Maps pill label → value stored in vendor_profiles.category
+const PILL_TO_CATEGORY: Record<string, string> = {
+  Venues: 'Venue',
+  Photography: 'Photography',
+  Catering: 'Catering',
+  'DJ / Music': 'DJ / Music',
+  Florals: 'Florals',
+  'Cakes & Desserts': 'Cakes & Desserts',
+  'Beauty & Hair': 'Beauty & Hair',
+  Videography: 'Videography',
+  Decor: 'Decor',
+  'Photo Booth': 'Photo Booth',
 }
 
-interface FilterSection {
-  id: string; label: string; chips: string[]; defaults: string[]
+const CATEGORY_IMAGES: Record<string, string> = {
+  Venue: '/images/venues.jpg',
+  Photography: '/images/photographers.jpg',
+  Catering: '/images/catering.jpg',
+  'DJ / Music': '/images/music.jpg',
+  Florals: '/images/florists.jpg',
+  'Cakes & Desserts': '/images/cakes.jpg',
+  'Beauty & Hair': '/images/beauty.jpg',
 }
 
-// ── Static data ────────────────────────────────────────────────────────────────
-
-const CATEGORIES = [
-  '✦ All', '🌸 Florals', '📸 Photo', '🍽️ Catering',
-  '🎵 DJ', '🏛️ Venues', '💄 Beauty', '🍹 Bar', '🪑 Rentals',
+const BUDGET_OPTIONS = [
+  { label: 'Any budget', min: null, max: null },
+  { label: 'Under $500', min: null, max: 500 },
+  { label: '$500 – $1,500', min: 500, max: 1500 },
+  { label: '$1,500 – $5,000', min: 1500, max: 5000 },
+  { label: '$5,000+', min: 5000, max: null },
 ]
 
-const GRID_VENDORS: GridVendor[] = [
-  { icon: '🌸', imgBg: 'linear-gradient(135deg,#E6F7F2,#A8DCC8)', category: 'Florals',     name: 'Bloom & Co',      stars: '★★★★★', rating: 4.9, price: '$2,200', verified: '✓ Pro',   match: 98 },
-  { icon: '📸', imgBg: 'linear-gradient(135deg,#F3E8FF,#DDB8F5)', category: 'Photography', name: 'Lens & Light',    stars: '★★★★★', rating: 5.0, price: '$3,100', verified: '✓ Elite', match: 95 },
-  { icon: '🎵', imgBg: 'linear-gradient(135deg,#FEF3E2,#FDDCB5)', category: 'DJ / Music',  name: 'DJ Smooth HTX',   stars: '★★★★★', rating: 4.8, price: '$1,450', verified: '✓ Pro',   match: 92 },
-  { icon: '🍽️', imgBg: 'linear-gradient(135deg,#FDEDEC,#FAB8B2)', category: 'Catering',   name: 'Saffron & Co',    stars: '★★★★☆', rating: 4.7, price: '$4,800', verified: '✓ Pro',   match: 91 },
-  { icon: '🏛️', imgBg: 'linear-gradient(135deg,#E3F2FD,#90CAF9)', category: 'Venue',      name: 'The Astorian',    stars: '★★★★★', rating: 4.9, price: '$5,500', verified: '✓ Elite' },
-  { icon: '💄', imgBg: 'linear-gradient(135deg,#FCE4EC,#F48FB1)', category: 'Beauty',      name: 'Glam Squad HTX',  stars: '★★★★★', rating: 5.0, price: '$850',   verified: '✓ Pro' },
-]
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-const LIST_VENDORS: ListVendor[] = [
-  { icon: '🌸', imgBg: 'linear-gradient(135deg,#E6F7F2,#A8DCC8)', name: 'Bloom & Co Florals',   category: 'Florals & Décor · Houston, TX', match: 98, tags: ['Botanical', 'Romantic', 'Luxury'],       stars: '★★★★★', rating: 4.9, reviews: 87,  price: '$2,200' },
-  { icon: '📸', imgBg: 'linear-gradient(135deg,#F3E8FF,#DDB8F5)', name: 'Lens & Light Studio',  category: 'Photography · Houston, TX',      match: 95, tags: ['Candlelit', 'Editorial', 'Film'],       stars: '★★★★★', rating: 5.0, reviews: 120, price: '$3,100' },
-  { icon: '🎵', imgBg: 'linear-gradient(135deg,#FEF3E2,#FDDCB5)', name: 'DJ Smooth Houston',    category: 'DJ / Music · Houston, TX',       match: 92, tags: ['Afrobeats', 'R&B', 'Wedding'],         stars: '★★★★★', rating: 4.8, reviews: 64,  price: '$1,450' },
-  { icon: '🍽️', imgBg: 'linear-gradient(135deg,#FDEDEC,#FAB8B2)', name: 'Saffron & Co Catering',category: 'Catering · Houston, TX',         match: 91, tags: ['Halal', 'West African', 'Fusion'],     stars: '★★★★☆', rating: 4.7, reviews: 43,  price: '$4,800' },
-]
+function categoryImage(category: string): string {
+  return CATEGORY_IMAGES[category] ?? '/images/feature.jpg'
+}
 
-const FILTER_SECTIONS: FilterSection[] = [
-  { id: 'verification', label: 'Verification', chips: ['All', '☑️ Basic', '✅ Pro', '🏆 Elite'],              defaults: ['All'] },
-  { id: 'rating',       label: 'Rating',       chips: ['Any', '4.5+ ★', '4.8+ ★', '5.0 ★'],                  defaults: ['4.5+ ★'] },
-  { id: 'availability', label: 'Availability', chips: ['Aug 14, 2025', 'Flexible'],                            defaults: ['Aug 14, 2025'] },
-  { id: 'style',        label: 'Style',        chips: ['Romantic', 'Luxury', 'Boho', 'Modern', 'Cultural'],    defaults: ['Romantic', 'Luxury'] },
-]
+function formatPrice(from: number | null, to: number | null): string {
+  if (!from && !to) return 'Price on request'
+  if (from && to) return `$${from.toLocaleString()} – $${to.toLocaleString()}`
+  if (from) return `From $${from.toLocaleString()}`
+  return `Up to $${to!.toLocaleString()}`
+}
 
-const NAV_ITEMS = [
-  { icon: '🏠', label: 'Home' },
-  { icon: '🔍', label: 'Vendors' },
-  { icon: '📋', label: 'My Event' },
-  { icon: '💬', label: 'Messages' },
-  { icon: '👤', label: 'Profile' },
-]
+// ── Star rating ───────────────────────────────────────────────────────────────
 
-// ── Page ───────────────────────────────────────────────────────────────────────
-
-export default function VendorsPage() {
-  const [activeCat,   setActiveCat]   = useState('✦ All')
-  const [view,        setView]        = useState<'grid' | 'list'>('grid')
-  const [filterOpen,  setFilterOpen]  = useState(false)
-  const [query,       setQuery]       = useState('')
-  const [activeNav,   setActiveNav]   = useState('Vendors')
-  const [savedVendors, setSavedVendors] = useState<Set<string>>(new Set())
-
-  // Filter state: one Set per section
-  const [filters, setFilters] = useState<Record<string, Set<string>>>(() =>
-    Object.fromEntries(FILTER_SECTIONS.map(s => [s.id, new Set(s.defaults)]))
+function Stars({ rating }: { rating: number }) {
+  return (
+    <span className="flex items-center gap-[2px]" aria-label={`${rating} out of 5 stars`}>
+      {Array.from({ length: 5 }).map((_, i) => {
+        const filled = i < Math.round(rating)
+        return (
+          <svg key={i} width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+            <path
+              d="M5 1l1.12 2.27 2.5.36-1.81 1.76.43 2.49L5 6.77l-2.24 1.11.43-2.49L1.38 3.63l2.5-.36z"
+              fill={filled ? '#D4AC0D' : 'none'}
+              stroke={filled ? '#D4AC0D' : '#C0ACD4'}
+              strokeWidth="0.6"
+            />
+          </svg>
+        )
+      })}
+    </span>
   )
+}
 
-  function toggleFilterChip(sectionId: string, chip: string) {
-    setFilters(prev => {
-      const next = { ...prev }
-      const set = new Set(prev[sectionId])
-      set.has(chip) ? set.delete(chip) : set.add(chip)
-      next[sectionId] = set
-      return next
-    })
-  }
+// ── Skeleton card ─────────────────────────────────────────────────────────────
 
-  function toggleSave(name: string) {
-    setSavedVendors(prev => {
-      const next = new Set(prev)
-      next.has(name) ? next.delete(name) : next.add(name)
-      return next
-    })
-  }
-
-  const activeFilterCount = Object.values(filters).reduce(
-    (n, set) => n + (set.size > 0 ? 1 : 0), 0
+function SkeletonCard() {
+  return (
+    <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(74,14,110,0.06)' }}>
+      <div className="h-48 bg-[#E8DFF5] animate-pulse" />
+      <div className="p-4 space-y-3">
+        <div className="h-3 w-1/3 bg-[#DDB8F5] rounded animate-pulse" />
+        <div className="h-4 w-2/3 bg-[#E8DFF5] rounded animate-pulse" />
+        <div className="h-3 w-1/2 bg-[#EEE8F8] rounded animate-pulse" />
+        <div className="h-8 bg-[#F3E8FF] rounded-xl animate-pulse mt-2" />
+      </div>
+    </div>
   )
+}
+
+// ── Vendor card ───────────────────────────────────────────────────────────────
+
+function VendorCard({ vendor }: { vendor: VendorProfile }) {
+  const [imgError, setImgError] = useState(false)
+  const imgSrc = imgError ? '/images/feature.jpg' : categoryImage(vendor.category)
 
   return (
     <div
-      className={`${syne.variable} ${epilogue.variable} min-h-screen bg-[#1A1A2E] flex items-center justify-center p-6`}
-      style={{ fontFamily: 'var(--font-epilogue), sans-serif' }}
+      className="bg-white rounded-2xl overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-0.5"
+      style={{ boxShadow: '0 2px 12px rgba(74,14,110,0.08)' }}
     >
-      {/* Phone frame — position:relative so the filter sheet can anchor to it */}
-      <div
-        className="w-[375px] h-[812px] bg-[#F8F4FC] rounded-[48px] overflow-hidden flex flex-col flex-shrink-0 relative"
-        style={{ boxShadow: '0 40px 80px rgba(0,0,0,0.5), 0 0 0 10px #2D2D45, 0 0 0 12px #3D3D55' }}
-      >
-        {/* Notch */}
-        <div className="w-[120px] h-8 bg-[#1A1A2E] rounded-b-[20px] mx-auto flex-shrink-0" />
+      {/* Image */}
+      <div className="relative h-48 flex-shrink-0 overflow-hidden">
+        <Image
+          src={imgSrc}
+          alt={vendor.business_name}
+          fill
+          className="object-cover"
+          onError={() => setImgError(true)}
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+        />
+        {/* Verified badge */}
+        <div
+          className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold text-white"
+          style={{ background: '#0D9B6A', fontFamily: 'var(--font-syne-vl)' }}
+        >
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden="true">
+            <path d="M1.5 4l1.8 1.8L6.5 2" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Verified
+        </div>
+      </div>
 
-        {/* ── SEARCH HEADER ── */}
-        <div className="bg-[#1A1A2E] px-5 pt-[14px] pb-4 flex-shrink-0 relative overflow-hidden">
-          {/* Decorative glow */}
-          <div
-            aria-hidden
-            className="absolute w-[200px] h-[200px] rounded-full pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(107,31,154,0.3) 0%, transparent 70%)', top: '-80px', right: '-40px' }}
-          />
+      {/* Body */}
+      <div className="p-4 flex flex-col flex-1">
+        {/* Category pill */}
+        <span
+          className="self-start px-2.5 py-1 rounded-full text-[10px] font-semibold mb-2"
+          style={{ background: '#F3E8FF', color: '#4A0E6E', fontFamily: 'var(--font-space-vl)' }}
+        >
+          {vendor.category}
+        </span>
 
-          {/* Title row */}
-          <div className="flex items-center justify-between mb-[14px] relative z-[1]">
-            <div
-              className="text-[20px] font-extrabold text-white tracking-[-0.5px]"
-              style={{ fontFamily: 'var(--font-syne)' }}
-            >Find Vendors</div>
-            <button
-              className="flex items-center gap-1.5 bg-white/10 border border-white/15 rounded-[10px] px-3 py-[7px] text-[12px] font-bold text-white cursor-pointer hover:bg-white/15 transition-colors duration-150"
-              style={{ fontFamily: 'var(--font-syne)' }}
-              onClick={() => setFilterOpen(true)}
-            >
-              <div className="w-1.5 h-1.5 rounded-full bg-[#DDB8F5]" />
-              Filters
-            </button>
+        {/* Name */}
+        <h3
+          className="text-base font-bold text-[#1A1A2E] mb-1 leading-snug"
+          style={{ fontFamily: 'var(--font-syne-vl)' }}
+        >
+          {vendor.business_name}
+        </h3>
+
+        {/* Location */}
+        <p className="text-xs text-[#7C6B8A] mb-2" style={{ fontFamily: 'var(--font-space-vl)' }}>
+          {vendor.location || 'Houston, TX'}
+        </p>
+
+        {/* Rating */}
+        {vendor.rating_average != null && (
+          <div className="flex items-center gap-1.5 mb-2">
+            <Stars rating={vendor.rating_average} />
+            <span className="text-xs text-[#7C6B8A]" style={{ fontFamily: 'var(--font-space-vl)' }}>
+              {vendor.rating_average.toFixed(1)}
+              {vendor.review_count ? ` (${vendor.review_count})` : ''}
+            </span>
           </div>
+        )}
+
+        {/* Pricing */}
+        <p
+          className="text-sm font-bold text-[#4A0E6E] mb-3"
+          style={{ fontFamily: 'var(--font-syne-vl)' }}
+        >
+          {formatPrice(vendor.pricing_from, vendor.pricing_to)}
+        </p>
+
+        {/* Description */}
+        {vendor.description && (
+          <p
+            className="text-xs text-[#7C6B8A] leading-relaxed mb-4 flex-1"
+            style={{
+              fontFamily: 'var(--font-space-vl)',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
+          >
+            {vendor.description}
+          </p>
+        )}
+
+        {/* CTA */}
+        <Link
+          href={`/vendors/${vendor.id}`}
+          className="block w-full text-center py-2.5 rounded-xl text-sm font-semibold border transition-colors duration-150 mt-auto"
+          style={{
+            borderColor: '#4A0E6E',
+            color: '#4A0E6E',
+            fontFamily: 'var(--font-space-vl)',
+          }}
+          onMouseOver={e => {
+            ;(e.currentTarget as HTMLAnchorElement).style.background = '#4A0E6E'
+            ;(e.currentTarget as HTMLAnchorElement).style.color = 'white'
+          }}
+          onMouseOut={e => {
+            ;(e.currentTarget as HTMLAnchorElement).style.background = 'transparent'
+            ;(e.currentTarget as HTMLAnchorElement).style.color = '#4A0E6E'
+          }}
+        >
+          View profile
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+export default function VendorsPage() {
+  const [vendors, setVendors] = useState<VendorProfile[]>([])
+  const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState('')
+
+  const [search, setSearch] = useState('')
+  const [activeCategory, setActiveCategory] = useState('All')
+  const [activeBudget, setActiveBudget] = useState('Any budget')
+
+  // Fetch approved & verified vendors on mount
+  useEffect(() => {
+    async function fetchVendors() {
+      const supabase = getSupabaseClient()
+      const { data, error } = await supabase
+        .from('vendor_profiles')
+        .select('*')
+        .eq('application_status', 'approved')
+        .eq('is_verified', true)
+        .order('business_name', { ascending: true })
+
+      if (error) {
+        setFetchError(error.message)
+      } else {
+        setVendors(data ?? [])
+      }
+      setLoading(false)
+    }
+    fetchVendors()
+  }, [])
+
+  // Client-side filtering
+  const filtered = useMemo(() => {
+    const budget = BUDGET_OPTIONS.find(b => b.label === activeBudget)
+    const categoryValue = PILL_TO_CATEGORY[activeCategory]
+    const q = search.trim().toLowerCase()
+
+    return vendors.filter(v => {
+      // Category filter
+      if (activeCategory !== 'All' && v.category !== categoryValue) return false
+
+      // Budget filter
+      if (budget && (budget.min !== null || budget.max !== null)) {
+        const pricingFrom = v.pricing_from ?? 0
+        if (budget.max !== null && pricingFrom > budget.max) return false
+        if (budget.min !== null && pricingFrom < budget.min) return false
+      }
+
+      // Search filter
+      if (q) {
+        const haystack = [v.business_name, v.category, v.location, v.description]
+          .join(' ')
+          .toLowerCase()
+        if (!haystack.includes(q)) return false
+      }
+
+      return true
+    })
+  }, [vendors, activeCategory, activeBudget, search])
+
+  return (
+    <div
+      className={`${syne.variable} ${spaceGrotesk.variable} min-h-screen bg-[#F8F4FC]`}
+      style={{ fontFamily: 'var(--font-space-vl), system-ui, sans-serif' }}
+    >
+      {/* ── TOP NAV ── */}
+      <nav
+        className="sticky top-0 z-30 bg-[#F8F4FC] border-b border-[#EDE5F7]"
+        style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
+      >
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+          <Link
+            href="/"
+            className="text-xl font-extrabold tracking-tight text-[#4A0E6E] hover:opacity-80 transition-opacity flex-shrink-0"
+            style={{ fontFamily: 'var(--font-syne-vl)' }}
+          >
+            evnti.
+          </Link>
+
+          <span
+            className="text-sm font-semibold text-[#1A1A2E] hidden sm:block"
+            style={{ fontFamily: 'var(--font-syne-vl)' }}
+          >
+            Find vendors
+          </span>
+
+          <Link
+            href="/onboarding"
+            className="flex-shrink-0 px-5 py-2 rounded-full text-sm font-semibold text-white transition-all hover:opacity-90"
+            style={{ background: '#4A0E6E', fontFamily: 'var(--font-space-vl)' }}
+          >
+            Plan my event
+          </Link>
+        </div>
+      </nav>
+
+      {/* ── HERO ── */}
+      <section
+        className="bg-[#1A1A2E] px-6 py-16 lg:py-20"
+        style={{ background: 'linear-gradient(135deg, #1A1A2E 0%, #2D0845 100%)' }}
+      >
+        <div className="max-w-2xl mx-auto text-center">
+          <h1
+            className="text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight"
+            style={{ fontFamily: 'var(--font-syne-vl)' }}
+          >
+            Find your dream team.
+          </h1>
+          <p
+            className="text-white/60 text-base mb-8 leading-relaxed"
+            style={{ fontFamily: 'var(--font-space-vl)' }}
+          >
+            Browse verified vendors across Houston. Filter by category, budget, and availability.
+          </p>
 
           {/* Search bar */}
-          <div className="flex items-center gap-2.5 bg-white/10 border-[1.5px] border-white/[0.12] rounded-2xl px-4 py-3 mb-[14px] relative z-[1] focus-within:border-[#DDB8F5] transition-colors duration-200">
-            <span className="text-base flex-shrink-0">🔍</span>
+          <div className="relative max-w-xl mx-auto">
+            <svg
+              className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle cx="7" cy="7" r="4.5" stroke="#7C6B8A" strokeWidth="1.5" />
+              <path d="M10.5 10.5L13 13" stroke="#7C6B8A" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
             <input
               type="text"
-              className="flex-1 bg-transparent border-none text-[14px] text-white outline-none placeholder:text-white/35"
-              style={{ fontFamily: 'var(--font-epilogue)' }}
-              placeholder="Search caterers, DJs, venues…"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search vendors, categories, locations..."
+              className="w-full pl-11 pr-10 py-4 rounded-2xl bg-white text-sm text-[#1A1A2E] placeholder-[#C0ACD4] outline-none focus:ring-2 focus:ring-[#4A0E6E]/30 transition-all"
+              style={{ fontFamily: 'var(--font-space-vl)' }}
             />
-            {query && (
-              <span
-                className="text-[14px] text-white/40 cursor-pointer flex-shrink-0"
-                onClick={() => setQuery('')}
-              >✕</span>
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#7C6B8A] hover:text-[#1A1A2E] transition-colors"
+                aria-label="Clear search"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
             )}
           </div>
-
-          {/* Category pills */}
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-0.5 relative z-[1]">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat}
-                className={`flex items-center gap-[5px] rounded-[20px] px-3 py-1.5 text-[11px] font-bold whitespace-nowrap cursor-pointer border-[1.5px] flex-shrink-0 transition-all duration-200 ${
-                  activeCat === cat
-                    ? 'bg-[#6B1F9A] border-[#6B1F9A] text-white'
-                    : 'bg-white/[0.08] border-white/10 text-white/70 hover:border-[#DDB8F5] hover:text-white'
-                }`}
-                style={{ fontFamily: 'var(--font-syne)' }}
-                onClick={() => setActiveCat(cat)}
-              >{cat}</button>
-            ))}
-          </div>
         </div>
+      </section>
 
-        {/* ── BROWSE BODY ── */}
-        <div className="flex-1 overflow-y-auto scrollbar-hide px-[18px] py-[14px]">
-
-          {/* AI Picks Banner */}
-          <div
-            className="flex items-center gap-3 rounded-2xl p-[14px_16px] mb-[14px] cursor-pointer hover:-translate-y-px transition-transform duration-150"
-            style={{ background: 'linear-gradient(135deg, #4A0E6E, #6B1F9A)' }}
-          >
-            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center text-[20px] flex-shrink-0">✦</div>
-            <div className="flex-1">
-              <div
-                className="text-[10px] font-bold text-white/50 tracking-[1px] uppercase mb-0.5"
-                style={{ fontFamily: 'var(--font-syne)' }}
-              >Curated for your wedding</div>
-              <div
-                className="text-[14px] font-extrabold text-white"
-                style={{ fontFamily: 'var(--font-syne)' }}
-              >24 AI-Matched Vendors</div>
-              <div className="text-[11px] text-white/50 mt-[1px]">Based on your mood board &amp; $15K budget</div>
-            </div>
-            <div className="text-[20px] text-white/40">→</div>
-          </div>
-
-          {/* Section header + view toggle */}
-          <div className="flex items-center justify-between mb-2.5" style={{ fontFamily: 'var(--font-syne)' }}>
-            <span className="text-[13px] font-bold text-[#1A1A2E] tracking-[-0.2px]">
-              All Vendors <span className="text-[11px] font-medium text-[#7C6B8A]">(142)</span>
-            </span>
-            <div className="flex gap-1 bg-[#F3E8FF] rounded-lg p-[3px]">
-              {(['grid', 'list'] as const).map((v) => (
+      {/* ── FILTER BAR ── */}
+      <div
+        className="sticky z-20 bg-[#F8F4FC] border-b border-[#EDE5F7]"
+        style={{ top: '64px' }}
+      >
+        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-4">
+          {/* Category pills — horizontally scrollable */}
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1 pb-0.5">
+            {CATEGORY_PILLS.map(pill => {
+              const active = activeCategory === pill
+              return (
                 <button
-                  key={v}
-                  className={`px-2 py-1 rounded-md text-[14px] cursor-pointer border-none transition-all duration-150 ${
-                    view === v ? 'bg-white shadow-[0_1px_4px_rgba(74,14,110,0.1)]' : 'bg-transparent'
-                  }`}
-                  onClick={() => setView(v)}
-                >{v === 'grid' ? '⊞' : '☰'}</button>
-              ))}
-            </div>
-          </div>
-
-          {/* ── GRID VIEW ── */}
-          {view === 'grid' && (
-            <div className="grid grid-cols-2 gap-2.5 mb-[14px]">
-              {GRID_VENDORS.map((v) => (
-                <div
-                  key={v.name}
-                  className="bg-white rounded-2xl overflow-hidden cursor-pointer border-2 border-transparent hover:border-[#DDB8F5] hover:-translate-y-0.5 transition-all duration-200"
-                  style={{ boxShadow: '0 2px 8px rgba(74,14,110,0.06)', animation: 'popIn 0.3s ease both' }}
+                  key={pill}
+                  type="button"
+                  onClick={() => setActiveCategory(pill)}
+                  className="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold border transition-all duration-150"
+                  style={{
+                    background: active ? '#4A0E6E' : 'white',
+                    color: active ? 'white' : '#1A1A2E',
+                    borderColor: active ? '#4A0E6E' : '#DDB8F5',
+                    fontFamily: 'var(--font-space-vl)',
+                  }}
                 >
-                  {/* Image area */}
-                  <div
-                    className="h-[90px] flex items-center justify-center text-[36px] relative"
-                    style={{ background: v.imgBg }}
-                  >
-                    {/* Match badge */}
-                    {v.match && (
-                      <div
-                        className="absolute top-1.5 left-1.5 bg-[#4A0E6E]/85 rounded-md px-1.5 py-[2px] text-[9px] font-bold text-[#DDB8F5]"
-                        style={{ fontFamily: 'var(--font-syne)' }}
-                      >{v.match}%</div>
-                    )}
-                    {v.icon}
-                    {/* Verified badge */}
-                    <div
-                      className="absolute top-1.5 right-1.5 bg-[#0D9B6A] rounded-md px-1.5 py-[2px] text-[9px] font-bold text-white"
-                      style={{ fontFamily: 'var(--font-syne)' }}
-                    >{v.verified}</div>
-                  </div>
-                  {/* Card body */}
-                  <div className="px-2.5 pt-2.5 pb-3">
-                    <div
-                      className="text-[9px] font-bold tracking-[1px] uppercase text-[#7C6B8A] mb-0.5"
-                      style={{ fontFamily: 'var(--font-syne)' }}
-                    >{v.category}</div>
-                    <div
-                      className="text-[12px] font-bold text-[#1A1A2E] mb-1 truncate"
-                      style={{ fontFamily: 'var(--font-syne)' }}
-                    >{v.name}</div>
-                    <div className="flex items-center gap-1 mb-1.5">
-                      <span className="text-[10px] text-[#D4AC0D]">{v.stars}</span>
-                      <span className="text-[10px] text-[#7C6B8A]">{v.rating}</span>
-                    </div>
-                    <div
-                      className="text-[13px] font-extrabold text-[#4A0E6E]"
-                      style={{ fontFamily: 'var(--font-syne)' }}
-                    >
-                      {v.price} <span className="text-[10px] font-normal text-[#7C6B8A]">from</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                  {pill}
+                </button>
+              )
+            })}
+          </div>
 
-          {/* ── LIST VIEW ── */}
-          {view === 'list' && (
-            <div className="flex flex-col gap-2.5 mb-[14px]">
-              {LIST_VENDORS.map((v) => {
-                const saved = savedVendors.has(v.name)
-                return (
-                  <div
-                    key={v.name}
-                    className="bg-white rounded-2xl p-[14px] flex gap-3 cursor-pointer border-2 border-transparent hover:border-[#DDB8F5] hover:translate-x-[3px] transition-all duration-200"
-                    style={{ boxShadow: '0 2px 8px rgba(74,14,110,0.06)' }}
-                  >
-                    {/* Image */}
-                    <div
-                      className="w-14 h-14 rounded-xl flex items-center justify-center text-[28px] flex-shrink-0 relative"
-                      style={{ background: v.imgBg }}
-                    >
-                      {v.icon}
-                      {/* Verified circle */}
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[#0D9B6A] border-2 border-white flex items-center justify-center text-[9px] text-white">✓</div>
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-1.5 mb-[3px]">
-                        <div
-                          className="text-[14px] font-bold text-[#1A1A2E]"
-                          style={{ fontFamily: 'var(--font-syne)' }}
-                        >{v.name}</div>
-                        <div
-                          className="text-[11px] font-extrabold text-[#0D9B6A] flex-shrink-0"
-                          style={{ fontFamily: 'var(--font-syne)' }}
-                        >{v.match}% match</div>
-                      </div>
-                      <div className="text-[11px] text-[#7C6B8A] mb-[5px]">{v.category}</div>
-                      <div className="flex gap-[5px] flex-wrap mb-1.5">
-                        {v.tags.map(tag => (
-                          <div
-                            key={tag}
-                            className="bg-[#F3E8FF] rounded-[5px] px-[7px] py-[2px] text-[10px] font-semibold text-[#4A0E6E]"
-                            style={{ fontFamily: 'var(--font-syne)' }}
-                          >{tag}</div>
-                        ))}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          <span className="text-[11px] text-[#D4AC0D]">{v.stars}</span>
-                          <span className="text-[11px] text-[#7C6B8A]">{v.rating} ({v.reviews})</span>
-                        </div>
-                        <div
-                          className="text-[14px] font-extrabold text-[#4A0E6E]"
-                          style={{ fontFamily: 'var(--font-syne)' }}
-                        >{v.price}</div>
-                        <button
-                          className={`rounded-lg px-3 py-1.5 text-[11px] font-bold cursor-pointer border-none transition-all duration-150 ${
-                            saved
-                              ? 'bg-[#E6F7F2] text-[#0D9B6A]'
-                              : 'bg-[#4A0E6E] text-white hover:bg-[#6B1F9A]'
-                          }`}
-                          style={{ fontFamily: 'var(--font-syne)' }}
-                          onClick={e => { e.stopPropagation(); toggleSave(v.name) }}
-                        >{saved ? '✓ Saved' : '+ Save'}</button>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
+          {/* Budget dropdown */}
+          <select
+            value={activeBudget}
+            onChange={e => setActiveBudget(e.target.value)}
+            className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border border-[#DDB8F5] bg-white text-[#1A1A2E] outline-none focus:border-[#4A0E6E] appearance-none cursor-pointer"
+            style={{ fontFamily: 'var(--font-space-vl)' }}
+          >
+            {BUDGET_OPTIONS.map(b => (
+              <option key={b.label} value={b.label}>
+                {b.label}
+              </option>
+            ))}
+          </select>
         </div>
+      </div>
 
-        {/* ── BOTTOM NAV ── */}
-        <div className="flex bg-white border-t border-[#F3E8FF] pt-2.5 pb-4 flex-shrink-0">
-          {NAV_ITEMS.map(({ icon, label }) => (
-            <button
-              key={label}
-              className="flex-1 flex flex-col items-center gap-[3px] py-1.5 border-none bg-transparent cursor-pointer"
-              onClick={() => setActiveNav(label)}
-            >
-              <span className="text-[20px]">{icon}</span>
-              <span
-                className="text-[10px] font-bold"
-                style={{ color: activeNav === label ? '#4A0E6E' : '#7C6B8A', fontFamily: 'var(--font-syne)' }}
-              >{label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* ── FILTER OVERLAY ── */}
-        {filterOpen && (
-          <div
-            className="absolute inset-0 bg-black/40 z-[99]"
-            onClick={() => setFilterOpen(false)}
-          />
+      {/* ── MAIN CONTENT ── */}
+      <main className="max-w-6xl mx-auto px-6 py-10">
+        {/* Result count */}
+        {!loading && !fetchError && vendors.length > 0 && (
+          <p
+            className="text-sm text-[#7C6B8A] mb-6"
+            style={{ fontFamily: 'var(--font-space-vl)' }}
+          >
+            {filtered.length} vendor{filtered.length !== 1 ? 's' : ''} found
+          </p>
         )}
 
-        {/* ── FILTER SHEET ── */}
-        {filterOpen && (
-          <div
-            className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[24px] px-[22px] pt-5 pb-9 z-[100]"
-            style={{ boxShadow: '0 -20px 60px rgba(74,14,110,0.2)', animation: 'slideUp 0.3s ease both' }}
-          >
-            {/* Handle */}
-            <div className="w-9 h-1 rounded-sm bg-[#DDB8F5] mx-auto mb-4" />
-
-            <div
-              className="text-[16px] font-extrabold text-[#1A1A2E] mb-4"
-              style={{ fontFamily: 'var(--font-syne)' }}
-            >Filter Vendors</div>
-
-            {/* Verification */}
-            {FILTER_SECTIONS.map(section => (
-              <div key={section.id} className="mb-4">
-                <div
-                  className="text-[11px] font-bold tracking-[1px] uppercase text-[#7C6B8A] mb-2"
-                  style={{ fontFamily: 'var(--font-syne)' }}
-                >{section.label}</div>
-                <div className="flex gap-[7px] flex-wrap">
-                  {section.chips.map(chip => {
-                    const active = filters[section.id]?.has(chip)
-                    return (
-                      <button
-                        key={chip}
-                        className={`bg-[#F8F4FC] border-2 rounded-[20px] px-3 py-1.5 text-[12px] font-semibold cursor-pointer transition-all duration-150 ${
-                          active
-                            ? 'bg-[#4A0E6E] border-[#4A0E6E] text-white'
-                            : 'border-[#DDB8F5] text-[#1A1A2E] hover:border-[#4A0E6E]'
-                        }`}
-                        style={{ fontFamily: 'var(--font-syne)' }}
-                        onClick={() => toggleFilterChip(section.id, chip)}
-                      >{chip}</button>
-                    )
-                  })}
-                </div>
-              </div>
-            ))}
-
-            {/* Price Range */}
-            <div className="mb-4">
-              <div
-                className="text-[11px] font-bold tracking-[1px] uppercase text-[#7C6B8A] mb-2"
-                style={{ fontFamily: 'var(--font-syne)' }}
-              >Price Range</div>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  placeholder="Min $"
-                  className="flex-1 bg-[#F8F4FC] border-2 border-[#DDB8F5] rounded-[10px] px-3 py-2.5 text-[13px] text-[#1A1A2E] outline-none focus:border-[#4A0E6E] transition-colors duration-200"
-                  style={{ fontFamily: 'var(--font-epilogue)' }}
-                />
-                <input
-                  type="number"
-                  placeholder="Max $"
-                  className="flex-1 bg-[#F8F4FC] border-2 border-[#DDB8F5] rounded-[10px] px-3 py-2.5 text-[13px] text-[#1A1A2E] outline-none focus:border-[#4A0E6E] transition-colors duration-200"
-                  style={{ fontFamily: 'var(--font-epilogue)' }}
-                />
-              </div>
-            </div>
-
-            {/* Apply */}
-            <button
-              className="w-full bg-[#4A0E6E] text-white text-[15px] font-bold border-none rounded-2xl py-[15px] cursor-pointer mt-2 hover:-translate-y-px transition-all duration-150"
-              style={{ fontFamily: 'var(--font-syne)' }}
-              onClick={() => setFilterOpen(false)}
-            >Apply Filters</button>
+        {/* Fetch error */}
+        {fetchError && (
+          <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3 mb-6">
+            {fetchError}
           </div>
         )}
 
-      </div>
+        {/* Loading skeletons */}
+        {loading && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        )}
+
+        {/* Vendor grid */}
+        {!loading && filtered.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filtered.map(vendor => (
+              <VendorCard key={vendor.id} vendor={vendor} />
+            ))}
+          </div>
+        )}
+
+        {/* Empty state — no approved vendors at all */}
+        {!loading && !fetchError && vendors.length === 0 && (
+          <div className="flex flex-col items-center text-center py-24">
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6"
+              style={{ background: '#F3E8FF' }}
+            >
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+                <rect x="4" y="8" width="20" height="14" rx="2" stroke="#4A0E6E" strokeWidth="1.5" />
+                <path d="M4 12h20" stroke="#4A0E6E" strokeWidth="1.5" />
+                <path d="M9 6l5-2 5 2" stroke="#4A0E6E" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </div>
+            <h2
+              className="text-2xl font-bold text-[#1A1A2E] mb-2"
+              style={{ fontFamily: 'var(--font-syne-vl)' }}
+            >
+              Vendors coming soon.
+            </h2>
+            <p
+              className="text-[#7C6B8A] text-sm leading-relaxed mb-6 max-w-xs"
+              style={{ fontFamily: 'var(--font-space-vl)' }}
+            >
+              We are onboarding our first vendors in Houston. Check back soon.
+            </p>
+            <Link
+              href="/vendor/apply"
+              className="text-sm font-semibold text-[#4A0E6E] underline underline-offset-4 hover:opacity-80 transition-opacity"
+              style={{ fontFamily: 'var(--font-space-vl)' }}
+            >
+              Are you a vendor? Apply here
+            </Link>
+          </div>
+        )}
+
+        {/* Empty state — filters return nothing but vendors exist */}
+        {!loading && !fetchError && vendors.length > 0 && filtered.length === 0 && (
+          <div className="flex flex-col items-center text-center py-24">
+            <h2
+              className="text-xl font-bold text-[#1A1A2E] mb-2"
+              style={{ fontFamily: 'var(--font-syne-vl)' }}
+            >
+              No vendors match your filters.
+            </h2>
+            <p
+              className="text-[#7C6B8A] text-sm mb-6"
+              style={{ fontFamily: 'var(--font-space-vl)' }}
+            >
+              Try adjusting your category, budget, or search term.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('')
+                setActiveCategory('All')
+                setActiveBudget('Any budget')
+              }}
+              className="px-5 py-2.5 rounded-full text-sm font-semibold border border-[#4A0E6E] text-[#4A0E6E] hover:bg-[#F3E8FF] transition-colors"
+              style={{ fontFamily: 'var(--font-space-vl)' }}
+            >
+              Clear filters
+            </button>
+          </div>
+        )}
+      </main>
     </div>
   )
 }
