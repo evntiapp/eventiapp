@@ -195,7 +195,7 @@ export default function HomePage() {
       >
         {/* Mobile background image — hidden on md+ (right col takes over) */}
         <div className="absolute inset-0 md:hidden" style={{ zIndex: 0 }}>
-          <Image src="/images/Hero.jpg" alt="" fill sizes="100vw" priority className="object-cover" />
+          <Image src="/images/Hero.jpg" alt="" fill sizes="50vw" priority className="object-cover" />
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,10,46,0.72)' }} />
         </div>
 

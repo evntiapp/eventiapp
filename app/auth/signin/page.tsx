@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
 
@@ -30,7 +31,6 @@ export default function SignInPage() {
       return
     }
 
-    // Fetch role from users table
     const { data: userData } = await supabase
       .from('users')
       .select('role')
@@ -48,46 +48,110 @@ export default function SignInPage() {
 
   return (
     <div
-      className={`${syne.variable} ${spaceGrotesk.variable} min-h-screen flex items-center justify-center px-4`}
-      style={{ background: 'var(--plum-deep)', fontFamily: 'var(--font-space), sans-serif' }}
+      className={`${syne.variable} ${spaceGrotesk.variable}`}
+      style={{ display: 'flex', minHeight: '100vh', fontFamily: 'var(--font-space), sans-serif' }}
     >
-      {/* Background orb */}
-      <div style={{
-        position: 'fixed', top: '-20%', right: '-10%',
-        width: 600, height: 600, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(107,31,154,0.3) 0%, transparent 70%)',
-        pointerEvents: 'none',
-      }} />
+      {/* ── LEFT PANEL (55%) ── */}
+      <div
+        className="hidden lg:block flex-shrink-0"
+        style={{ width: '55%', position: 'sticky', top: 0, height: '100vh', overflow: 'hidden' }}
+      >
+        <Image
+          src="/images/hero.jpg"
+          alt=""
+          fill
+          style={{ objectFit: 'cover', objectPosition: 'center' }}
+          sizes="55vw"
+          priority
+        />
+        {/* Dark overlay */}
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,26,46,0.5)' }} />
 
-      <div style={{ width: '100%', maxWidth: 440, position: 'relative', zIndex: 1 }}>
-        {/* Logo */}
-        <a href="/" style={{ display: 'block', textAlign: 'center', marginBottom: '2.5rem', textDecoration: 'none' }}>
-          <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: '2rem', letterSpacing: '-0.03em', color: 'var(--off-white)' }}>
+        {/* Content */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column',
+          justifyContent: 'space-between',
+          padding: '3rem 3.5rem',
+        }}>
+          {/* Logo top-left */}
+          <a href="/" style={{ textDecoration: 'none' }}>
+            <span style={{
+              fontFamily: 'var(--font-syne)', fontWeight: 800,
+              fontSize: '1.75rem', letterSpacing: '-0.03em',
+              color: 'white',
+            }}>
+              evnti<span style={{ color: 'var(--lavender)' }}>.</span>
+            </span>
+          </a>
+
+          {/* Quote bottom-left */}
+          <div>
+            <p style={{
+              fontFamily: 'var(--font-syne)', fontWeight: 700,
+              fontSize: 'clamp(1.6rem, 2.5vw, 2.2rem)',
+              color: 'white', lineHeight: 1.25,
+              letterSpacing: '-0.025em',
+              maxWidth: 440, margin: 0,
+            }}>
+              Welcome back. Your next event awaits.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── RIGHT PANEL (45%) ── */}
+      <div
+        style={{
+          flex: 1,
+          background: '#ffffff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '100vh',
+        }}
+      >
+        {/* Mobile logo bar */}
+        <div
+          className="lg:hidden"
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 10,
+            padding: '1.25rem 1.5rem',
+            background: '#fff',
+            borderBottom: '1px solid rgba(74,14,110,0.06)',
+          }}
+        >
+          <span style={{
+            fontFamily: 'var(--font-syne)', fontWeight: 800,
+            fontSize: '1.25rem', color: 'var(--plum)', letterSpacing: '-0.03em',
+          }}>
             evnti<span style={{ color: 'var(--lavender)' }}>.</span>
           </span>
-        </a>
+        </div>
 
-        {/* Card */}
-        <div style={{
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(221,184,245,0.12)',
-          borderRadius: 24, padding: '2.5rem',
-        }}>
+        <div style={{ width: '100%', maxWidth: 460, padding: '60px' }}>
           <h1 style={{
             fontFamily: 'var(--font-syne)', fontWeight: 700,
-            fontSize: '1.75rem', letterSpacing: '-0.025em',
-            color: 'var(--off-white)', marginBottom: '0.5rem',
+            fontSize: 32, letterSpacing: '-0.025em',
+            color: '#1A1A2E', marginBottom: '0.5rem', marginTop: 0,
           }}>
             Welcome back
           </h1>
-          <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.4)', marginBottom: '2rem' }}>
-            Sign in to your Evnti account
+          <p style={{
+            fontFamily: 'var(--font-space)', fontWeight: 400,
+            fontSize: '0.9375rem', color: '#6B7280',
+            marginBottom: '2.25rem', marginTop: 0,
+          }}>
+            Sign in to your Evnti account to continue.
           </p>
 
-          <form onSubmit={handleSignIn} className="flex flex-col gap-4">
+          <form onSubmit={handleSignIn} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {/* Email */}
-            <div className="flex flex-col gap-1.5">
-              <label style={{ fontSize: '0.8rem', fontWeight: 500, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.02em' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{
+                fontFamily: 'var(--font-space)', fontWeight: 500,
+                fontSize: 13, color: '#374151',
+              }}>
                 Email address
               </label>
               <input
@@ -97,22 +161,27 @@ export default function SignInPage() {
                 placeholder="you@example.com"
                 disabled={loading}
                 style={{
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(221,184,245,0.2)',
-                  borderRadius: 12, padding: '0.75rem 1rem',
-                  fontFamily: 'var(--font-space)', fontSize: '0.9rem',
-                  color: 'white', outline: 'none',
+                  height: 52, borderRadius: 10,
+                  border: '1.5px solid #DDB8F5',
+                  padding: '0 1rem',
+                  fontFamily: 'var(--font-space)', fontSize: '0.9375rem',
+                  color: '#1A1A2E', outline: 'none',
+                  background: '#fff',
                   opacity: loading ? 0.5 : 1,
                   transition: 'border-color 0.2s',
+                  width: '100%', boxSizing: 'border-box',
                 }}
-                onFocus={e => (e.currentTarget.style.borderColor = 'rgba(221,184,245,0.5)')}
-                onBlur={e => (e.currentTarget.style.borderColor = 'rgba(221,184,245,0.2)')}
+                onFocus={e => (e.currentTarget.style.borderColor = '#6B1F9A')}
+                onBlur={e => (e.currentTarget.style.borderColor = '#DDB8F5')}
               />
             </div>
 
             {/* Password */}
-            <div className="flex flex-col gap-1.5">
-              <label style={{ fontSize: '0.8rem', fontWeight: 500, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.02em' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{
+                fontFamily: 'var(--font-space)', fontWeight: 500,
+                fontSize: 13, color: '#374151',
+              }}>
                 Password
               </label>
               <input
@@ -122,26 +191,29 @@ export default function SignInPage() {
                 placeholder="••••••••"
                 disabled={loading}
                 style={{
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(221,184,245,0.2)',
-                  borderRadius: 12, padding: '0.75rem 1rem',
-                  fontFamily: 'var(--font-space)', fontSize: '0.9rem',
-                  color: 'white', outline: 'none',
+                  height: 52, borderRadius: 10,
+                  border: '1.5px solid #DDB8F5',
+                  padding: '0 1rem',
+                  fontFamily: 'var(--font-space)', fontSize: '0.9375rem',
+                  color: '#1A1A2E', outline: 'none',
+                  background: '#fff',
                   opacity: loading ? 0.5 : 1,
                   transition: 'border-color 0.2s',
+                  width: '100%', boxSizing: 'border-box',
                 }}
-                onFocus={e => (e.currentTarget.style.borderColor = 'rgba(221,184,245,0.5)')}
-                onBlur={e => (e.currentTarget.style.borderColor = 'rgba(221,184,245,0.2)')}
+                onFocus={e => (e.currentTarget.style.borderColor = '#6B1F9A')}
+                onBlur={e => (e.currentTarget.style.borderColor = '#DDB8F5')}
               />
             </div>
 
             {/* Error */}
             {error && (
               <div style={{
-                background: 'rgba(239,68,68,0.1)',
-                border: '1px solid rgba(239,68,68,0.3)',
+                background: 'rgba(239,68,68,0.06)',
+                border: '1px solid rgba(239,68,68,0.25)',
                 borderRadius: 10, padding: '0.75rem 1rem',
-                fontSize: '0.82rem', color: 'rgba(255,160,160,0.9)',
+                fontFamily: 'var(--font-space)',
+                fontSize: '0.875rem', color: '#DC2626',
               }}>
                 {error}
               </div>
@@ -151,26 +223,32 @@ export default function SignInPage() {
             <button
               type="submit" disabled={loading}
               style={{
-                background: 'var(--lavender)', color: 'var(--plum)',
-                border: 'none', borderRadius: 12,
-                padding: '0.85rem 1.5rem',
-                fontFamily: 'var(--font-syne)', fontSize: '0.95rem', fontWeight: 700,
+                height: 52, borderRadius: 10,
+                background: 'var(--plum)',
+                color: 'white', border: 'none',
+                fontFamily: 'var(--font-syne)', fontSize: '0.9375rem', fontWeight: 700,
+                letterSpacing: '-0.01em',
                 cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.6 : 1,
-                transition: 'opacity 0.2s',
-                marginTop: '0.25rem',
+                opacity: loading ? 0.65 : 1,
+                transition: 'opacity 0.2s, transform 0.15s',
+                width: '100%',
               }}
-              onMouseOver={e => { if (!loading) e.currentTarget.style.opacity = '0.88' }}
-              onMouseOut={e => { if (!loading) e.currentTarget.style.opacity = '1' }}
+              onMouseOver={e => { if (!loading) { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'translateY(-1px)' } }}
+              onMouseOut={e => { if (!loading) { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(0)' } }}
             >
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
 
-          {/* Footer link */}
-          <p style={{ textAlign: 'center', marginTop: '1.75rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.35)' }}>
+          <p style={{
+            textAlign: 'center', marginTop: '1.75rem',
+            fontFamily: 'var(--font-space)', fontSize: '0.875rem',
+            color: '#9CA3AF',
+          }}>
             Don&apos;t have an account?{' '}
-            <Link href="/auth/signup" style={{ color: 'var(--lavender)', textDecoration: 'none', fontWeight: 500 }}>
+            <Link href="/auth/signup" style={{
+              color: 'var(--plum)', textDecoration: 'none', fontWeight: 600,
+            }}>
               Sign up
             </Link>
           </p>
