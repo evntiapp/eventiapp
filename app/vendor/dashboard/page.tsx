@@ -89,13 +89,24 @@ function thisMonthRevenue(bookings: Booking[]): number {
 function DashboardSkeleton() {
   return (
     <div className="min-h-screen bg-[#F8F4FC] animate-pulse">
-      <div className="h-16 bg-white border-b border-[#EDE5F7]" />
-      <div className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+      {/* Hero */}
+      <div className="bg-[#1A1A2E] px-6 pt-0 pb-20">
+        <div className="h-16" />
+        <div className="max-w-6xl mx-auto space-y-3 py-10">
+          <div className="h-7 w-72 bg-white/10 rounded" />
+          <div className="h-4 w-56 bg-white/10 rounded" />
+        </div>
+      </div>
+      {/* Stat cards overlapping */}
+      <div className="max-w-6xl mx-auto px-6 -mt-10 mb-10">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-24 bg-white rounded-2xl" />
+            <div key={i} className="h-24 bg-white rounded-2xl" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }} />
           ))}
         </div>
+      </div>
+      {/* Content */}
+      <div className="max-w-6xl mx-auto px-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
             <div className="h-5 w-40 bg-[#DDB8F5] rounded" />
@@ -154,8 +165,8 @@ function BookingCard({
 
   return (
     <div
-      className="bg-white rounded-2xl p-5"
-      style={{ boxShadow: '0 2px 10px rgba(74,14,110,0.07)' }}
+      className="bg-white p-5"
+      style={{ boxShadow: '0 4px 24px rgba(74,14,110,0.08)', borderRadius: 20 }}
     >
       {/* Header row */}
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -327,7 +338,18 @@ export default function VendorDashboardPage() {
   async function updateStatus(bookingId: string, status: 'confirmed' | 'declined') {
     setUpdating(bookingId)
     const supabase = getSupabaseClient()
-    await supabase.from('bookings').update({ status }).eq('id', bookingId)
+
+    if (status === 'confirmed') {
+      const booking = bookings.find(b => b.id === bookingId)
+      const depositAmount = Math.round((booking?.budget_for_vendor ?? 0) * 0.2)
+      await supabase
+        .from('bookings')
+        .update({ status, deposit_amount: depositAmount })
+        .eq('id', bookingId)
+    } else {
+      await supabase.from('bookings').update({ status }).eq('id', bookingId)
+    }
+
     await loadData()
     setUpdating(null)
   }
@@ -418,51 +440,73 @@ export default function VendorDashboardPage() {
       className={`${syne.variable} ${spaceGrotesk.variable} min-h-screen bg-[#F8F4FC]`}
       style={{ fontFamily: 'var(--font-space-vd), system-ui, sans-serif' }}
     >
-      {/* ── NAV ── */}
-      <nav
-        className="sticky top-0 z-30 bg-white border-b border-[#EDE5F7]"
-        style={{ boxShadow: '0 1px 0 #EDE5F7' }}
-      >
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-          <Link
-            href="/"
-            className="text-xl font-extrabold tracking-tight text-[#4A0E6E] hover:opacity-80 transition-opacity flex-shrink-0"
-            style={{ fontFamily: 'var(--font-syne-vd)' }}
-          >
-            evnti.
-          </Link>
+      {/* ── HERO BANNER (nav + heading inside) ── */}
+      <div className="relative">
+        <img
+          src="/images/feature.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0" style={{ background: 'rgba(26,26,46,0.85)' }} />
 
-          <span
-            className="text-sm font-semibold text-[#1A1A2E] hidden sm:block"
-            style={{ fontFamily: 'var(--font-syne-vd)' }}
-          >
-            Vendor Dashboard
-          </span>
+        <div className="relative z-10">
+          {/* Nav */}
+          <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+            <Link
+              href="/"
+              className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity flex-shrink-0"
+              style={{ fontFamily: 'var(--font-syne-vd)' }}
+            >
+              evnti.
+            </Link>
 
-          <div className="flex items-center gap-3 flex-shrink-0">
             <span
-              className="text-sm text-[#7C6B8A] hidden md:block"
-              style={{ fontFamily: 'var(--font-space-vd)' }}
+              className="text-sm font-semibold text-white/70 hidden sm:block"
+              style={{ fontFamily: 'var(--font-syne-vd)' }}
             >
-              {vendor.business_name}
+              Vendor Dashboard
             </span>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              disabled={signingOut}
-              className="px-4 py-2 rounded-full text-xs font-semibold border border-[#DDB8F5] text-[#7C6B8A] bg-transparent hover:border-[#4A0E6E] hover:text-[#4A0E6E] transition-colors disabled:opacity-50"
+
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <span
+                className="text-sm text-white/50 hidden md:block"
+                style={{ fontFamily: 'var(--font-space-vd)' }}
+              >
+                {vendor.business_name}
+              </span>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={signingOut}
+                className="px-4 py-2 rounded-full text-xs font-semibold border border-white/20 text-white/70 bg-transparent hover:border-white/50 hover:text-white transition-colors disabled:opacity-50"
+                style={{ fontFamily: 'var(--font-space-vd)' }}
+              >
+                {signingOut ? 'Signing out...' : 'Sign out'}
+              </button>
+            </div>
+          </nav>
+
+          {/* Heading */}
+          <div className="max-w-6xl mx-auto px-6 pt-8 pb-20 text-left">
+            <h1
+              className="text-[28px] font-bold text-white leading-tight mb-2"
+              style={{ fontFamily: 'var(--font-syne-vd)' }}
+            >
+              Welcome back, {vendor.business_name}.
+            </h1>
+            <p
+              className="text-sm text-white/60"
               style={{ fontFamily: 'var(--font-space-vd)' }}
             >
-              {signingOut ? 'Signing out...' : 'Sign out'}
-            </button>
+              Here&apos;s your business at a glance.
+            </p>
           </div>
         </div>
-      </nav>
+      </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
-
-        {/* ── STATS ROW ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* ── STAT CARDS overlapping the banner ── */}
+      <div className="relative z-10 max-w-6xl mx-auto px-6 -mt-10 mb-10">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard label="Total bookings" value={String(totalBookings)} />
           <StatCard label="Pending" value={String(pendingCount)} />
           <StatCard label="Confirmed" value={String(confirmedCount)} />
@@ -472,6 +516,9 @@ export default function VendorDashboardPage() {
             accent
           />
         </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-6 pb-12">
 
         {/* ── MAIN GRID ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -522,31 +569,35 @@ export default function VendorDashboardPage() {
             {/* Booking list */}
             {filteredBookings.length === 0 ? (
               <div
-                className="flex flex-col items-center text-center py-16 bg-white rounded-2xl"
-                style={{ boxShadow: '0 2px 10px rgba(74,14,110,0.07)' }}
+                className="bg-white overflow-hidden"
+                style={{ boxShadow: '0 4px 24px rgba(74,14,110,0.08)', borderRadius: 20 }}
               >
-                <div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
-                  style={{ background: '#F3E8FF' }}
-                >
-                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
-                    <rect x="3" y="5" width="16" height="13" rx="2" stroke="#4A0E6E" strokeWidth="1.3" />
-                    <path d="M3 9h16" stroke="#4A0E6E" strokeWidth="1.3" />
-                    <path d="M7 3v4M15 3v4" stroke="#4A0E6E" strokeWidth="1.3" strokeLinecap="round" />
-                  </svg>
+                <div className="relative h-[200px]">
+                  <img
+                    src="/images/venues.jpg"
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                  <div
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{ background: 'rgba(26,26,46,0.5)', borderRadius: 12 }}
+                  >
+                    <p
+                      className="text-base font-bold text-white"
+                      style={{ fontFamily: 'var(--font-syne-vd)' }}
+                    >
+                      No booking requests yet.
+                    </p>
+                  </div>
                 </div>
-                <p
-                  className="text-sm font-semibold text-[#1A1A2E] mb-1"
-                  style={{ fontFamily: 'var(--font-syne-vd)' }}
-                >
-                  No booking requests yet.
-                </p>
-                <p
-                  className="text-xs text-[#7C6B8A]"
-                  style={{ fontFamily: 'var(--font-space-vd)' }}
-                >
-                  Share your profile link to start getting bookings.
-                </p>
+                <div className="px-5 py-5 text-center">
+                  <p
+                    className="text-xs text-[#7C6B8A]"
+                    style={{ fontFamily: 'var(--font-space-vd)' }}
+                  >
+                    Share your profile link to start getting bookings.
+                  </p>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -569,15 +620,13 @@ export default function VendorDashboardPage() {
               className="bg-white rounded-2xl p-6"
               style={{ boxShadow: '0 4px 24px rgba(74,14,110,0.1)' }}
             >
-              {/* Photo placeholder */}
-              <div
-                className="w-full h-32 rounded-xl mb-4 flex items-center justify-center"
-                style={{ background: '#EDE5F7' }}
-              >
-                <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
-                  <circle cx="18" cy="14" r="6" stroke="#C0ACD4" strokeWidth="1.5" />
-                  <path d="M6 30c0-6.627 5.373-12 12-12s12 5.373 12 12" stroke="#C0ACD4" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
+              {/* Profile image */}
+              <div className="w-full h-[200px] mb-4 overflow-hidden" style={{ borderRadius: '12px 12px 0 0' }}>
+                <img
+                  src="/images/beauty.jpg"
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
               </div>
 
               {/* Vendor info */}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
 
@@ -86,6 +86,7 @@ const labelCls =
 export default function BookingPage() {
   const params = useParams()
   const id = params?.id as string
+  const router = useRouter()
 
   const [vendor, setVendor] = useState<VendorProfile | null>(null)
   const [vendorLoading, setVendorLoading] = useState(true)
@@ -94,7 +95,6 @@ export default function BookingPage() {
   const [form, setForm] = useState<BookingForm>(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
-  const [submitted, setSubmitted] = useState(false)
 
   // Fetch vendor
   useEffect(() => {
@@ -128,20 +128,28 @@ export default function BookingPage() {
 
     try {
       const supabase = getSupabaseClient()
-      const { error } = await supabase.from('bookings').insert({
-        vendor_id: id,
-        client_name: form.clientName,
-        client_email: form.clientEmail,
-        event_type: form.eventType,
-        event_date: form.eventDate || null,
-        guest_count: form.guestCount ? parseInt(form.guestCount, 10) : null,
-        event_location: form.eventLocation,
-        budget_for_vendor: form.budgetForVendor ? parseInt(form.budgetForVendor, 10) : null,
-        client_message: form.clientMessage,
-      })
+      const budgetInt = form.budgetForVendor ? parseInt(form.budgetForVendor, 10) : null
+      const { data: inserted, error } = await supabase
+        .from('bookings')
+        .insert({
+          vendor_id: id,
+          client_name: form.clientName,
+          client_email: form.clientEmail,
+          event_type: form.eventType,
+          event_date: form.eventDate || null,
+          guest_count: form.guestCount ? parseInt(form.guestCount, 10) : null,
+          event_location: form.eventLocation,
+          budget_for_vendor: budgetInt,
+          client_message: form.clientMessage,
+        })
+        .select('id')
+        .single()
 
       if (error) throw error
-      setSubmitted(true)
+      const depositAmount = budgetInt ? Math.round(budgetInt * 0.2) : 0
+      router.push(
+        `/vendors/${id}/book/payment?bookingId=${inserted!.id}&amount=${depositAmount}&vendorName=${encodeURIComponent(vendor!.business_name)}`
+      )
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
       setSubmitError(message)
@@ -202,64 +210,6 @@ export default function BookingPage() {
           >
             Browse all vendors
           </Link>
-        </div>
-      </div>
-    )
-  }
-
-  // ── Success ──
-  if (submitted) {
-    return (
-      <div
-        className={`${syne.variable} ${spaceGrotesk.variable} min-h-screen bg-[#F8F4FC] flex flex-col`}
-        style={{ fontFamily: 'var(--font-space-bk), system-ui, sans-serif' }}
-      >
-        <nav className="sticky top-0 z-30 bg-[#F8F4FC] border-b border-[#EDE5F7] px-6 h-16 flex items-center gap-6">
-          <Link
-            href="/"
-            className="text-xl font-extrabold tracking-tight text-[#4A0E6E]"
-            style={{ fontFamily: 'var(--font-syne-bk)' }}
-          >
-            evnti.
-          </Link>
-        </nav>
-        <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-24">
-          <div
-            className="w-20 h-20 rounded-full bg-[#4A0E6E] flex items-center justify-center mb-8"
-            style={{ boxShadow: '0 0 0 16px rgba(74,14,110,0.08)' }}
-          >
-            <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true">
-              <path d="M8 18L15 25L28 11" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <h2
-            className="text-3xl font-bold text-[#1A1A2E] mb-3"
-            style={{ fontFamily: 'var(--font-syne-bk)' }}
-          >
-            Request sent.
-          </h2>
-          <p
-            className="text-[#7C6B8A] text-base leading-relaxed mb-10 max-w-sm"
-            style={{ fontFamily: 'var(--font-space-bk)' }}
-          >
-            {vendor.business_name} will review your request and respond within 24 hours.
-          </p>
-          <div className="flex gap-4 flex-wrap justify-center">
-            <Link
-              href={`/vendors/${id}`}
-              className="px-6 py-2.5 rounded-full text-sm font-semibold border border-[#4A0E6E] text-[#4A0E6E] hover:bg-[#F3E8FF] transition-colors"
-              style={{ fontFamily: 'var(--font-space-bk)' }}
-            >
-              Back to profile
-            </Link>
-            <Link
-              href="/vendors"
-              className="px-6 py-2.5 rounded-full text-sm font-semibold text-white hover:opacity-90 transition-opacity"
-              style={{ background: '#4A0E6E', fontFamily: 'var(--font-space-bk)' }}
-            >
-              Browse more vendors
-            </Link>
-          </div>
         </div>
       </div>
     )
