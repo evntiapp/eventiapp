@@ -339,8 +339,9 @@ export default function VendorDashboardPage() {
     setUpdating(bookingId)
     const supabase = getSupabaseClient()
 
+    const booking = bookings.find(b => b.id === bookingId)
+
     if (status === 'confirmed') {
-      const booking = bookings.find(b => b.id === bookingId)
       const depositAmount = Math.round((booking?.budget_for_vendor ?? 0) * 0.2)
       await supabase
         .from('bookings')
@@ -348,6 +349,24 @@ export default function VendorDashboardPage() {
         .eq('id', bookingId)
     } else {
       await supabase.from('bookings').update({ status }).eq('id', bookingId)
+    }
+
+    // Email notification to client
+    if (booking?.client_email) {
+      fetch('/api/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: status === 'confirmed' ? 'booking_confirmed' : 'booking_declined',
+          to: booking.client_email,
+          data: {
+            clientName: booking.client_name,
+            vendorName: vendor?.business_name,
+            eventType: booking.event_type ?? '',
+            eventDate: booking.event_date ?? '',
+          },
+        }),
+      }).catch(() => {})
     }
 
     await loadData()
@@ -489,11 +508,17 @@ export default function VendorDashboardPage() {
           {/* Heading */}
           <div className="max-w-6xl mx-auto px-6 pt-8 pb-20 text-left">
             <h1
-              className="text-[28px] font-bold text-white leading-tight mb-2"
+              className="text-[28px] font-bold text-white leading-tight mb-1"
               style={{ fontFamily: 'var(--font-syne-vd)' }}
             >
               Welcome back, {vendor.business_name}.
             </h1>
+            <p
+              className="text-sm font-medium mb-2"
+              style={{ color: '#DDB8F5', fontFamily: 'var(--font-space-vd)', fontSize: 14 }}
+            >
+              Vendor Dashboard
+            </p>
             <p
               className="text-sm text-white/60"
               style={{ fontFamily: 'var(--font-space-vd)' }}

@@ -113,6 +113,18 @@ export default function VendorApplyPage() {
       })
 
       if (insertError) throw insertError
+
+      // Email notification to applicant
+      fetch('/api/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'application_received',
+          to: form.businessEmail,
+          data: { vendorName: form.businessName },
+        }),
+      }).catch(() => {})
+
       setSubmitted(true)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
@@ -153,12 +165,13 @@ export default function VendorApplyPage() {
         {/* Panel content */}
         <div className="relative z-10 h-full flex flex-col p-8 lg:p-12">
           {/* Logo */}
-          <div
-            className="text-white text-2xl font-extrabold tracking-tight"
+          <Link
+            href="/"
+            className="text-white text-2xl font-extrabold tracking-tight no-underline"
             style={{ fontFamily: 'var(--font-syne-apply)' }}
           >
             evnti.
-          </div>
+          </Link>
 
           {/* Center content — desktop only */}
           <div className="hidden lg:flex flex-col justify-center flex-1 max-w-sm">

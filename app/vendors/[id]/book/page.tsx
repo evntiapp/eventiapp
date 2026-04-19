@@ -25,6 +25,7 @@ interface VendorProfile {
   category: string
   pricing_from: number | null
   pricing_to: number | null
+  business_email: string | null
 }
 
 interface BookingForm {
@@ -103,7 +104,7 @@ export default function BookingPage() {
       const supabase = getSupabaseClient()
       const { data, error } = await supabase
         .from('vendor_profiles')
-        .select('id, business_name, category, pricing_from, pricing_to')
+        .select('id, business_name, category, pricing_from, pricing_to, business_email')
         .eq('id', id)
         .single()
 
@@ -146,6 +147,28 @@ export default function BookingPage() {
         .single()
 
       if (error) throw error
+
+      // Email notification to vendor
+      if (vendor!.business_email) {
+        fetch('/api/email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'booking_request',
+            to: vendor!.business_email,
+            data: {
+              vendorName: vendor!.business_name,
+              clientName: form.clientName,
+              eventType: form.eventType,
+              eventDate: form.eventDate,
+              guestCount: form.guestCount,
+              budget: form.budgetForVendor,
+              clientMessage: form.clientMessage,
+            },
+          }),
+        }).catch(() => {})
+      }
+
       const depositAmount = budgetInt ? Math.round(budgetInt * 0.2) : 0
       router.push(
         `/vendors/${id}/book/payment?bookingId=${inserted!.id}&amount=${depositAmount}&vendorName=${encodeURIComponent(vendor!.business_name)}`

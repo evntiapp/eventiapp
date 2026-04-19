@@ -142,14 +142,26 @@ export default function HomePage() {
         </a>
 
         <div className="hidden md:flex items-center gap-8">
-          {['For vendors', 'How it works', 'Pricing'].map(l => (
-            <a
-              key={l} href="#"
-              style={{ fontSize: '0.875rem', fontWeight: 400, color: 'var(--muted)', textDecoration: 'none', transition: 'color 0.2s' }}
-              onMouseOver={e => (e.currentTarget.style.color = 'var(--plum)')}
-              onMouseOut={e => (e.currentTarget.style.color = 'var(--muted)')}
-            >{l}</a>
-          ))}
+          <a
+            href="#how-it-works"
+            onClick={e => { e.preventDefault(); document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }) }}
+            style={{ fontSize: '0.875rem', fontWeight: 400, color: 'var(--muted)', textDecoration: 'none', transition: 'color 0.2s', cursor: 'pointer' }}
+            onMouseOver={e => (e.currentTarget.style.color = 'var(--plum)')}
+            onMouseOut={e => (e.currentTarget.style.color = 'var(--muted)')}
+          >How it works</a>
+          <a
+            href="#faq"
+            onClick={e => { e.preventDefault(); document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' }) }}
+            style={{ fontSize: '0.875rem', fontWeight: 400, color: 'var(--muted)', textDecoration: 'none', transition: 'color 0.2s', cursor: 'pointer' }}
+            onMouseOver={e => (e.currentTarget.style.color = 'var(--plum)')}
+            onMouseOut={e => (e.currentTarget.style.color = 'var(--muted)')}
+          >Pricing</a>
+          <a
+            href="/vendor/apply"
+            style={{ fontSize: '0.875rem', fontWeight: 400, color: 'var(--muted)', textDecoration: 'none', transition: 'color 0.2s' }}
+            onMouseOver={e => (e.currentTarget.style.color = 'var(--plum)')}
+            onMouseOut={e => (e.currentTarget.style.color = 'var(--muted)')}
+          >For vendors</a>
           <a
             href="/auth/signin"
             style={{ fontSize: '0.875rem', fontWeight: 400, color: 'var(--muted)', textDecoration: 'none', transition: 'color 0.2s' }}
@@ -377,7 +389,7 @@ export default function HomePage() {
       </div>
 
       {/* ── 4. HOW IT WORKS ────────────────────────────────────────────────── */}
-      <section className="px-8 md:px-14 py-24" style={{ background: 'var(--off-white)' }}>
+      <section id="how-it-works" className="px-8 md:px-14 py-24" style={{ background: 'var(--off-white)' }}>
         <div style={{ maxWidth: 1160, margin: '0 auto' }}>
           <div style={{ fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--plum-mid)', marginBottom: '0.875rem' }}>
             How it works
@@ -695,7 +707,7 @@ export default function HomePage() {
       </section>
 
       {/* ── 9. FAQ ─────────────────────────────────────────────────────────── */}
-      <section className="px-8 md:px-14 py-24" style={{ background: 'var(--lavender-light)' }}>
+      <section id="faq" className="px-8 md:px-14 py-24" style={{ background: 'var(--lavender-light)' }}>
         <div style={{ maxWidth: 1160, margin: '0 auto' }}>
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-16 lg:gap-20 items-start">
             {/* Left */}
@@ -815,11 +827,16 @@ export default function HomePage() {
               <h4 style={{ fontFamily: 'var(--font-syne)', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginBottom: '0.875rem' }}>
                 Product
               </h4>
-              {['How it works', 'Vendor marketplace', 'AI planner', 'Budget tools'].map(l => (
-                <a key={l} href="#" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 300, color: 'rgba(255,255,255,0.5)', textDecoration: 'none', marginBottom: '0.5rem', transition: 'color 0.2s' }}
+              {([
+                { label: 'How it works',      href: '#how-it-works' },
+                { label: 'Vendor marketplace', href: '/vendors' },
+                { label: 'AI planner',         href: '/ai-plan' },
+                { label: 'Budget tools',       href: '/dashboard' },
+              ] as { label: string; href: string }[]).map(({ label, href }) => (
+                <a key={label} href={href} style={{ display: 'block', fontSize: '0.85rem', fontWeight: 300, color: 'rgba(255,255,255,0.5)', textDecoration: 'none', marginBottom: '0.5rem', transition: 'color 0.2s' }}
                   onMouseOver={e => (e.currentTarget.style.color = 'var(--lavender)')}
                   onMouseOut={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.5)')}
-                >{l}</a>
+                >{label}</a>
               ))}
             </div>
             {/* Vendors */}
@@ -827,7 +844,7 @@ export default function HomePage() {
               <h4 style={{ fontFamily: 'var(--font-syne)', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginBottom: '0.875rem' }}>
                 Vendors
               </h4>
-              {[{ label: 'Apply as vendor', href: '/vendor/apply' }, { label: 'Vendor dashboard', href: '#' }, { label: 'Success stories', href: '#' }].map(({ label, href }) => (
+              {[{ label: 'Apply as vendor', href: '/vendor/apply' }, { label: 'Vendor dashboard', href: '/vendor/dashboard' }, { label: 'Success stories', href: '/vendors' }].map(({ label, href }) => (
                 <a key={label} href={href} style={{ display: 'block', fontSize: '0.85rem', fontWeight: 300, color: 'rgba(255,255,255,0.5)', textDecoration: 'none', marginBottom: '0.5rem', transition: 'color 0.2s' }}
                   onMouseOver={e => (e.currentTarget.style.color = 'var(--lavender)')}
                   onMouseOut={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.5)')}
@@ -839,12 +856,10 @@ export default function HomePage() {
               <h4 style={{ fontFamily: 'var(--font-syne)', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginBottom: '0.875rem' }}>
                 Company
               </h4>
-              {['About', 'Blog', 'Contact'].map(l => (
-                <a key={l} href="#" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 300, color: 'rgba(255,255,255,0.5)', textDecoration: 'none', marginBottom: '0.5rem', transition: 'color 0.2s' }}
-                  onMouseOver={e => (e.currentTarget.style.color = 'var(--lavender)')}
-                  onMouseOut={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.5)')}
-                >{l}</a>
-              ))}
+              <a href="mailto:easyeventsapps@gmail.com" style={{ display: 'block', fontSize: '0.85rem', fontWeight: 300, color: 'rgba(255,255,255,0.5)', textDecoration: 'none', marginBottom: '0.5rem', transition: 'color 0.2s' }}
+                onMouseOver={e => (e.currentTarget.style.color = 'var(--lavender)')}
+                onMouseOut={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.5)')}
+              >Contact</a>
             </div>
           </div>
 
@@ -852,11 +867,15 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.2)' }}>© 2026 Evnti. All rights reserved.</span>
             <div className="flex gap-6">
-              {['Privacy', 'Terms', 'Cookies'].map(l => (
-                <a key={l} href="#" style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.2)', textDecoration: 'none', transition: 'color 0.2s' }}
+              {([
+                { label: 'Privacy', href: '/privacy' },
+                { label: 'Terms',   href: '/vendor-terms' },
+                { label: 'Cookies', href: '/privacy' },
+              ] as { label: string; href: string }[]).map(({ label, href }) => (
+                <a key={label} href={href} style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.2)', textDecoration: 'none', transition: 'color 0.2s' }}
                   onMouseOver={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
                   onMouseOut={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.2)')}
-                >{l}</a>
+                >{label}</a>
               ))}
             </div>
           </div>

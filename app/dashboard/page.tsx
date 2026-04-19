@@ -217,6 +217,13 @@ export default function ClientDashboardPage() {
   const firstName = fullName.trim().split(' ')[0] || userEmail.split('@')[0]
   const greeting = firstName.charAt(0).toUpperCase() + firstName.slice(1)
 
+  function getTimeGreeting(): string {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'Good morning'
+    if (hour < 17) return 'Good afternoon'
+    return 'Good evening'
+  }
+
   return (
     <div
       className={`${syne.variable} ${spaceGrotesk.variable} min-h-screen bg-white`}
@@ -264,11 +271,17 @@ export default function ClientDashboardPage() {
       <div className="bg-[#1A1A2E] px-6 pt-10 pb-20">
         <div className="max-w-6xl mx-auto">
           <h1
-            className="text-[28px] font-bold text-white leading-tight mb-2"
+            className="text-[28px] font-bold text-white leading-tight mb-1"
             style={{ fontFamily: 'var(--font-syne-cd)' }}
           >
-            Good morning, {greeting}.
+            {getTimeGreeting()}, {greeting}.
           </h1>
+          <p
+            className="text-sm font-medium mb-2"
+            style={{ color: '#DDB8F5', fontFamily: 'var(--font-space-cd)', fontSize: 14 }}
+          >
+            Client Dashboard
+          </p>
           <p
             className="text-sm text-white/60"
             style={{ fontFamily: 'var(--font-space-cd)' }}

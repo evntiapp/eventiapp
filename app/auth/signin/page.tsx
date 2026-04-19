@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
 
@@ -56,14 +55,7 @@ export default function SignInPage() {
         className="hidden lg:block flex-shrink-0"
         style={{ width: '55%', position: 'sticky', top: 0, height: '100vh', overflow: 'hidden' }}
       >
-        <Image
-          src="/images/hero.jpg"
-          alt=""
-          fill
-          style={{ objectFit: 'cover', objectPosition: 'center' }}
-          sizes="55vw"
-          priority
-        />
+        <div style={{ position: 'absolute', inset: 0, backgroundImage: "url('/images/Hero.jpg')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
         {/* Dark overlay */}
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,26,46,0.5)' }} />
 
