@@ -99,6 +99,7 @@ export default function HomePage() {
   const [cta, setCta]             = useState<FormState>(INIT_FORM)
   const [ctaFocused, setCF]       = useState(false)
   const [openFaq, setOpenFaq]     = useState<number | null>(0)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   async function submitWaitlist(
     email: string,
@@ -185,19 +186,81 @@ export default function HomePage() {
           Join waitlist
         </button>
 
-        {/* Mobile CTA */}
+        {/* Mobile hamburger */}
         <button
-          className="md:hidden border-none cursor-pointer"
-          style={{
-            background: 'var(--plum)', color: 'var(--off-white)',
-            borderRadius: '100px', padding: '0.5rem 1rem',
-            fontSize: '0.8rem', fontWeight: 500,
-          }}
-          onClick={() => document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' })}
+          className="md:hidden border-none cursor-pointer flex flex-col justify-center items-center gap-[5px]"
+          style={{ background: 'none', padding: '0.25rem', width: 36, height: 36 }}
+          onClick={() => setMobileMenuOpen(o => !o)}
+          aria-label="Toggle menu"
         >
-          Join
+          <span style={{ display: 'block', width: 22, height: 2, background: 'var(--plum)', borderRadius: 2, transition: 'all 0.2s', transform: mobileMenuOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none' }} />
+          <span style={{ display: 'block', width: 22, height: 2, background: 'var(--plum)', borderRadius: 2, transition: 'all 0.2s', opacity: mobileMenuOpen ? 0 : 1 }} />
+          <span style={{ display: 'block', width: 22, height: 2, background: 'var(--plum)', borderRadius: 2, transition: 'all 0.2s', transform: mobileMenuOpen ? 'rotate(-45deg) translate(5px, -5px)' : 'none' }} />
         </button>
       </nav>
+
+      {/* Mobile dropdown menu */}
+      {mobileMenuOpen && (
+        <div
+          className="md:hidden flex flex-col"
+          style={{
+            position: 'fixed', top: '3.5rem', left: 0, right: 0, zIndex: 99,
+            background: 'white',
+            borderBottom: '1px solid rgba(74,14,110,0.08)',
+            boxShadow: '0 8px 24px rgba(74,14,110,0.1)',
+          }}
+        >
+          {[
+            { label: 'How it works', action: () => { setMobileMenuOpen(false); document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }) } },
+            { label: 'Pricing',      action: () => { setMobileMenuOpen(false); document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' }) } },
+            { label: 'For vendors',  href: '/vendor/apply' },
+            { label: 'Sign in',      href: '/auth/signin' },
+          ].map(item => (
+            item.href ? (
+              <a
+                key={item.label}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                style={{
+                  display: 'block', padding: '1rem 1.5rem',
+                  fontFamily: 'var(--font-space)', fontSize: '0.95rem', fontWeight: 500,
+                  color: 'var(--charcoal)', textDecoration: 'none',
+                  borderBottom: '1px solid rgba(74,14,110,0.05)',
+                }}
+              >
+                {item.label}
+              </a>
+            ) : (
+              <button
+                key={item.label}
+                onClick={item.action}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left',
+                  padding: '1rem 1.5rem', background: 'none', border: 'none',
+                  fontFamily: 'var(--font-space)', fontSize: '0.95rem', fontWeight: 500,
+                  color: 'var(--charcoal)', cursor: 'pointer',
+                  borderBottom: '1px solid rgba(74,14,110,0.05)',
+                }}
+              >
+                {item.label}
+              </button>
+            )
+          ))}
+          <div style={{ padding: '1rem 1.5rem' }}>
+            <button
+              onClick={() => { setMobileMenuOpen(false); document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' }) }}
+              style={{
+                width: '100%', padding: '0.75rem', borderRadius: 10, border: 'none',
+                background: 'var(--plum)', color: 'white',
+                fontFamily: 'var(--font-syne)', fontSize: '0.9rem', fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Join waitlist
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── 2. HERO ────────────────────────────────────────────────────────── */}
       <section
@@ -870,7 +933,7 @@ export default function HomePage() {
               {([
                 { label: 'Privacy', href: '/privacy' },
                 { label: 'Terms',   href: '/vendor-terms' },
-                { label: 'Cookies', href: '/privacy' },
+                { label: 'Cookies', href: '/privacy#cookies' },
               ] as { label: string; href: string }[]).map(({ label, href }) => (
                 <a key={label} href={href} style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.2)', textDecoration: 'none', transition: 'color 0.2s' }}
                   onMouseOver={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
