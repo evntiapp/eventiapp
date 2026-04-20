@@ -138,7 +138,7 @@ export default function HomePage() {
           borderBottom: '1px solid rgba(74,14,110,0.07)',
         }}
       >
-        <a href="#" style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: '1.6rem', letterSpacing: '-0.03em', color: 'var(--plum)', textDecoration: 'none' }}>
+        <a href="/" style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: '1.6rem', letterSpacing: '-0.03em', color: 'var(--plum)', textDecoration: 'none' }}>
           evnti<span style={{ color: 'var(--lavender)' }}>.</span>
         </a>
 

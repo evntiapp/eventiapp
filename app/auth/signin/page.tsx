@@ -39,7 +39,7 @@ export default function SignInPage() {
     setLoading(false)
 
     if (userData?.role === 'vendor') {
-      router.push('/vendor')
+      router.push('/vendor/dashboard')
     } else {
       router.push('/dashboard')
     }

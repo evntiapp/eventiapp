@@ -15,6 +15,10 @@ interface EventContext {
   guest_count?: number
   budget?: number
   location?: string
+  vision?: string
+  style?: string
+  additional_notes?: string
+  [key: string]: unknown
 }
 
 function stripMarkdown(text: string): string {
@@ -50,42 +54,67 @@ function TypingIndicator() {
   )
 }
 
+const GENERIC_GREETING = "Hi! I'm Eve, your Evnti planning assistant. Tell me about your event — what are you celebrating, when is it, and what's your budget?"
+
 export default function AIPlanPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content:
-        "Hi! I'm Eve, your Evnti planning assistant. Tell me about your event — what are you celebrating, when is it, and what's your budget?",
-    },
-  ])
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [eventContext, setEventContext] = useState<EventContext | null>(null)
+  const [hasEventContext, setHasEventContext] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Fetch user's most recent event on load
+  // Fetch user's most recent event on load, then seed the opening message
   useEffect(() => {
     async function fetchEvent() {
       try {
         const supabase = getSupabaseClient()
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
+        if (!user) {
+          setMessages([{ role: 'assistant', content: GENERIC_GREETING }])
+          return
+        }
 
-        const { data } = await supabase
+        const { data: eventData } = await supabase
           .from('events')
-          .select('event_type, event_date, guest_count, budget, location')
+          .select('*')
           .eq('client_id', user.id)
           .order('created_at', { ascending: false })
           .limit(1)
           .single()
 
-        if (data) setEventContext(data)
+        if (!eventData) {
+          setMessages([{ role: 'assistant', content: GENERIC_GREETING }])
+          return
+        }
+
+        setEventContext(eventData as EventContext)
+        setHasEventContext(true)
+        setLoading(true)
+
+        try {
+          const res = await fetch('/api/ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messages: [{ role: 'user', content: 'Please give me an opening plan based on my event details.' }],
+              eventContext: eventData,
+            }),
+          })
+          const json = await res.json()
+          setMessages([{ role: 'assistant', content: json.response ?? GENERIC_GREETING }])
+        } catch {
+          setMessages([{ role: 'assistant', content: GENERIC_GREETING }])
+        } finally {
+          setLoading(false)
+        }
       } catch {
-        // No event found — proceed without context
+        setMessages([{ role: 'assistant', content: GENERIC_GREETING }])
       }
     }
     fetchEvent()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Auto-scroll to bottom when messages change
@@ -135,7 +164,7 @@ export default function AIPlanPage() {
     }
   }
 
-  const hasOnlyGreeting = messages.length === 1
+  const hasOnlyGreeting = messages.length === 1 && !hasEventContext
 
   return (
     <div
