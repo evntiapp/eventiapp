@@ -3,7 +3,6 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Syne, Space_Grotesk, Cormorant_Garamond } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
 import {
@@ -236,16 +235,14 @@ function SplitShell({
         }}
       >
         {/* Background photo */}
-        <Image
-          src={bgImage}
-          alt=""
-          fill
-          style={{ objectFit: 'cover', objectPosition: 'center' }}
-          sizes="40vw"
-          priority
-        />
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: `url('${bgImage}')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }} />
         {/* Dark plum overlay */}
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(74,14,110,0.78)', zIndex: 1 }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,26,46,0.7)', zIndex: 1 }} />
         {/* Content */}
         <div style={{
           position: 'absolute',
@@ -491,18 +488,16 @@ export default function OnboardingPage() {
             overflow: 'hidden',
             flexShrink: 0,
           }}>
-            <Image
-              src="/images/hero.jpg"
-              alt=""
-              fill
-              style={{ objectFit: 'cover', objectPosition: 'center' }}
-              sizes="60vw"
-              priority
-            />
+            <div style={{
+              position: 'absolute', inset: 0,
+              backgroundImage: "url('/images/Hero.jpg')",
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }} />
             {/* Dark overlay */}
             <div style={{
               position: 'absolute', inset: 0,
-              background: 'rgba(26,26,46,0.65)',
+              background: 'rgba(26,26,46,0.7)',
               zIndex: 1,
             }} />
 

@@ -932,7 +932,7 @@ export default function HomePage() {
             <div className="flex gap-6">
               {([
                 { label: 'Privacy', href: '/privacy' },
-                { label: 'Terms',   href: '/vendor-terms' },
+                { label: 'Terms',   href: '/terms' },
                 { label: 'Cookies', href: '/privacy#cookies' },
               ] as { label: string; href: string }[]).map(({ label, href }) => (
                 <a key={label} href={href} style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.2)', textDecoration: 'none', transition: 'color 0.2s' }}
