@@ -13,19 +13,24 @@ type Role = 'client' | 'vendor'
 
 export default function SignUpPage() {
   const router = useRouter()
-  const [fullName, setFullName]   = useState('')
-  const [email, setEmail]         = useState('')
-  const [password, setPassword]   = useState('')
-  const [confirm, setConfirm]     = useState('')
-  const [loading, setLoading]     = useState<Role | null>(null)
-  const [error, setError]         = useState<string | null>(null)
+  const [fullName, setFullName]       = useState('')
+  const [email, setEmail]             = useState('')
+  const [password, setPassword]       = useState('')
+  const [confirm, setConfirm]         = useState('')
+  const [loading, setLoading]         = useState<Role | null>(null)
+  const [error, setError]             = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+
+  function isValidPassword(pw: string) {
+    return pw.length >= 15 && /[a-zA-Z]/.test(pw) && /[0-9]/.test(pw)
+  }
 
   async function handleSignUp(role: Role) {
     setError(null)
 
     if (!fullName.trim()) { setError('Please enter your full name.'); return }
     if (!email.trim())    { setError('Please enter your email address.'); return }
-    if (password.length < 6) { setError('Password must be at least 6 characters.'); return }
+    if (!isValidPassword(password)) { setError('Password must be at least 15 characters with letters and numbers.'); return }
     if (password !== confirm) { setError('Passwords do not match.'); return }
 
     setLoading(role)
@@ -211,15 +216,48 @@ export default function SignUpPage() {
             {/* Password */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <label style={labelStyle}>Password</label>
-              <input
-                type="password" autoComplete="new-password"
-                value={password}
-                onChange={e => { setPassword(e.target.value); setError(null) }}
-                placeholder="Min. 6 characters"
-                style={fieldStyle}
-                onFocus={e => (e.currentTarget.style.borderColor = '#6B1F9A')}
-                onBlur={e => (e.currentTarget.style.borderColor = '#DDB8F5')}
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'} autoComplete="new-password"
+                  value={password}
+                  onChange={e => { setPassword(e.target.value); setError(null) }}
+                  placeholder="Min. 15 characters"
+                  style={{ ...fieldStyle, paddingRight: '2.75rem' }}
+                  onFocus={e => (e.currentTarget.style.borderColor = '#6B1F9A')}
+                  onBlur={e => (e.currentTarget.style.borderColor = '#DDB8F5')}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  style={{
+                    position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                    color: '#9CA3AF', display: 'flex', alignItems: 'center',
+                  }}
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                      <line x1="1" y1="1" x2="23" y2="23"/>
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  )}
+                </button>
+              </div>
+              {password.length > 0 && (
+                <p style={{
+                  fontFamily: 'var(--font-space)', fontSize: '0.8125rem', margin: 0,
+                  color: isValidPassword(password) ? '#16a34a' : '#DC2626',
+                }}>
+                  Must be at least 15 characters with letters and numbers
+                </p>
+              )}
             </div>
 
             {/* Confirm password */}

@@ -158,6 +158,8 @@ export default function ClientDashboardPage() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [events, setEvents] = useState<ClientEvent[]>([])
   const [signingOut, setSigningOut] = useState(false)
+  const [fabOpen, setFabOpen]       = useState(false)
+  const [activeNav, setActiveNav]   = useState<string>('My Events')
 
   const loadData = useCallback(async () => {
     const supabase = getSupabaseClient()
@@ -288,6 +290,42 @@ export default function ClientDashboardPage() {
           >
             Here&apos;s what&apos;s happening with your events.
           </p>
+
+          {/* ── SECTION NAV ── */}
+          <div className="mt-7 -mx-6 px-6 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div className="flex gap-2 pb-1" style={{ minWidth: 'max-content' }}>
+              {([
+                { label: 'My Events',      action: () => { setActiveNav('My Events'); setTimeout(() => document.getElementById('events-section')?.scrollIntoView({ behavior: 'smooth' }), 10) } },
+                { label: 'My Bookings',    action: () => { setActiveNav('My Bookings'); setTimeout(() => document.getElementById('bookings-section')?.scrollIntoView({ behavior: 'smooth' }), 10) } },
+                { label: 'Find Vendors',   href: '/vendors' },
+                { label: 'Plan New Event', href: '/onboarding' },
+                { label: 'Ask Eve',        href: '/ai-plan' },
+                { label: 'My Schedule',    href: '/schedule' },
+              ] as { label: string; href?: string; action?: () => void }[]).map(item => {
+                const active = activeNav === item.label
+                const pillStyle: React.CSSProperties = {
+                  display: 'inline-flex', alignItems: 'center',
+                  height: 34, padding: '0 14px', borderRadius: 100,
+                  fontFamily: 'var(--font-space-cd)', fontSize: 13, fontWeight: 500,
+                  background: active ? '#4A0E6E' : 'white',
+                  color: active ? 'white' : '#4A0E6E',
+                  border: active ? '1.5px solid #4A0E6E' : '1.5px solid #4A0E6E',
+                  cursor: 'pointer', whiteSpace: 'nowrap', textDecoration: 'none',
+                  transition: 'background 0.15s, color 0.15s',
+                  flexShrink: 0,
+                }
+                return item.href ? (
+                  <Link key={item.label} href={item.href} style={pillStyle} onClick={() => setActiveNav(item.label)}>
+                    {item.label}
+                  </Link>
+                ) : (
+                  <button key={item.label} type="button" style={pillStyle} onClick={item.action}>
+                    {item.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -309,7 +347,7 @@ export default function ClientDashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
           {/* ── LEFT: Bookings ── */}
-          <div className="lg:col-span-2">
+          <div id="bookings-section" className="lg:col-span-2">
             <h2
               className="text-lg font-bold text-[#1A1A2E] mb-5"
               style={{ fontFamily: 'var(--font-syne-cd)' }}
@@ -445,7 +483,7 @@ export default function ClientDashboardPage() {
           </div>
 
           {/* ── RIGHT: Events ── */}
-          <div className="lg:sticky lg:top-24">
+          <div id="events-section" className="lg:sticky lg:top-24">
             <h2
               className="text-lg font-bold text-[#1A1A2E] mb-5"
               style={{ fontFamily: 'var(--font-syne-cd)' }}
@@ -552,6 +590,48 @@ export default function ClientDashboardPage() {
         </div>
         </div>
       </div>
+
+      {/* ── FAB ── */}
+      <div style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 50 }}>
+        {fabOpen && (
+          <div className="flex flex-col items-end gap-2 mb-3" style={{ animation: 'fabUp 0.15s ease both' }}>
+            {([
+              { label: 'Plan new event', href: '/onboarding' },
+              { label: 'Find vendors',   href: '/vendors' },
+              { label: 'Ask Eve',        href: '/ai-plan' },
+            ] as { label: string; href: string }[]).map(item => (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={() => setFabOpen(false)}
+                className="px-4 py-2.5 rounded-full text-xs font-semibold text-white whitespace-nowrap"
+                style={{ background: '#4A0E6E', fontFamily: 'var(--font-space-cd)', textDecoration: 'none', boxShadow: '0 4px 16px rgba(74,14,110,0.35)' }}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setFabOpen(o => !o)}
+          className="w-14 h-14 rounded-full flex items-center justify-center border-none cursor-pointer text-white shadow-xl"
+          style={{
+            background: '#4A0E6E',
+            boxShadow: '0 4px 20px rgba(74,14,110,0.45)',
+            transition: 'transform 0.2s',
+            transform: fabOpen ? 'rotate(45deg)' : 'rotate(0deg)',
+            fontSize: 28, lineHeight: 1,
+          }}
+          aria-label="Quick actions"
+        >
+          +
+        </button>
+      </div>
+
+      <style>{`
+        @keyframes fabUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
     </div>
   )
 }

@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { createClient } from '@supabase/supabase-js'
 import Image from 'next/image'
@@ -100,6 +100,13 @@ export default function HomePage() {
   const [ctaFocused, setCF]       = useState(false)
   const [openFaq, setOpenFaq]     = useState<number | null>(0)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsLoggedIn(!!user)
+    })
+  }, [])
 
   async function submitWaitlist(
     email: string,
@@ -171,20 +178,37 @@ export default function HomePage() {
           >Sign in</a>
         </div>
 
-        <button
-          className="hidden md:inline-block border-none cursor-pointer"
-          style={{
-            background: 'var(--plum)', color: 'var(--off-white)',
-            borderRadius: '100px', padding: '0.6rem 1.4rem',
-            fontFamily: 'var(--font-space)', fontSize: '0.85rem', fontWeight: 500,
-            transition: 'background 0.2s',
-          }}
-          onClick={() => document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' })}
-          onMouseOver={e => (e.currentTarget.style.background = 'var(--plum-mid)')}
-          onMouseOut={e => (e.currentTarget.style.background = 'var(--plum)')}
-        >
-          Join waitlist
-        </button>
+        {isLoggedIn ? (
+          <a
+            href="/dashboard"
+            className="hidden md:inline-block"
+            style={{
+              background: 'var(--plum)', color: 'var(--off-white)',
+              borderRadius: '100px', padding: '0.6rem 1.4rem',
+              fontFamily: 'var(--font-space)', fontSize: '0.85rem', fontWeight: 500,
+              textDecoration: 'none', transition: 'background 0.2s',
+            }}
+            onMouseOver={e => (e.currentTarget.style.background = 'var(--plum-mid)')}
+            onMouseOut={e => (e.currentTarget.style.background = 'var(--plum)')}
+          >
+            Dashboard
+          </a>
+        ) : (
+          <button
+            className="hidden md:inline-block border-none cursor-pointer"
+            style={{
+              background: 'var(--plum)', color: 'var(--off-white)',
+              borderRadius: '100px', padding: '0.6rem 1.4rem',
+              fontFamily: 'var(--font-space)', fontSize: '0.85rem', fontWeight: 500,
+              transition: 'background 0.2s',
+            }}
+            onClick={() => document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' })}
+            onMouseOver={e => (e.currentTarget.style.background = 'var(--plum-mid)')}
+            onMouseOut={e => (e.currentTarget.style.background = 'var(--plum)')}
+          >
+            Join waitlist
+          </button>
+        )}
 
         {/* Mobile hamburger */}
         <button
@@ -247,17 +271,32 @@ export default function HomePage() {
             )
           ))}
           <div style={{ padding: '1rem 1.5rem' }}>
-            <button
-              onClick={() => { setMobileMenuOpen(false); document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' }) }}
-              style={{
-                width: '100%', padding: '0.75rem', borderRadius: 10, border: 'none',
-                background: 'var(--plum)', color: 'white',
-                fontFamily: 'var(--font-syne)', fontSize: '0.9rem', fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              Join waitlist
-            </button>
+            {isLoggedIn ? (
+              <a
+                href="/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{
+                  display: 'block', width: '100%', padding: '0.75rem', borderRadius: 10,
+                  background: 'var(--plum)', color: 'white', textAlign: 'center',
+                  fontFamily: 'var(--font-syne)', fontSize: '0.9rem', fontWeight: 700,
+                  textDecoration: 'none',
+                }}
+              >
+                Go to Dashboard
+              </a>
+            ) : (
+              <button
+                onClick={() => { setMobileMenuOpen(false); document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' }) }}
+                style={{
+                  width: '100%', padding: '0.75rem', borderRadius: 10, border: 'none',
+                  background: 'var(--plum)', color: 'white',
+                  fontFamily: 'var(--font-syne)', fontSize: '0.9rem', fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Join waitlist
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -387,6 +426,23 @@ export default function HomePage() {
                 }
               </form>
             )}
+            <div className="flex items-center gap-3 mt-4">
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+              <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)' }}>or</span>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+            </div>
+            <a
+              href="/onboarding"
+              style={{
+                display: 'block', marginTop: '0.75rem', textAlign: 'center',
+                fontFamily: 'var(--font-space)', fontSize: '0.875rem', fontWeight: 500,
+                color: 'var(--lavender)', textDecoration: 'none', transition: 'opacity 0.2s',
+              }}
+              onMouseOver={e => (e.currentTarget.style.opacity = '0.75')}
+              onMouseOut={e => (e.currentTarget.style.opacity = '1')}
+            >
+              Start Planning →
+            </a>
           </div>
         </div>
 
@@ -530,6 +586,22 @@ export default function HomePage() {
                     </span>
                   ))}
                 </div>
+                {/* CTA */}
+                <a
+                  href="/ai-plan"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    marginTop: '1rem',
+                    background: 'var(--lavender)', color: 'var(--plum)',
+                    borderRadius: '100px', padding: '0.55rem 1.25rem',
+                    fontFamily: 'var(--font-space)', fontSize: '0.8rem', fontWeight: 600,
+                    textDecoration: 'none', transition: 'opacity 0.2s',
+                  }}
+                  onMouseOver={e => (e.currentTarget.style.opacity = '0.85')}
+                  onMouseOut={e => (e.currentTarget.style.opacity = '1')}
+                >
+                  Talk to Eve →
+                </a>
               </div>
             </div>
           </div>

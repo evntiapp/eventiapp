@@ -425,7 +425,7 @@ export default function OnboardingPage() {
       const supabase = getSupabaseClient()
       const { data: { user } } = await supabase.auth.getUser()
 
-      await supabase.from('events').insert({
+      const { data: inserted } = await supabase.from('events').insert({
         client_id:            user?.id ?? null,
         event_type:           eventType,
         description:          dreamText,
@@ -440,13 +440,13 @@ export default function OnboardingPage() {
         tier:                 selectedTier,
         status:               'planning',
         created_at:           new Date().toISOString(),
-      })
+      }).select('id').single()
 
       await new Promise(r => setTimeout(r, 2800))
-      router.push('/ai-plan')
+      router.push(inserted?.id ? `/events/${inserted.id}` : '/dashboard')
     } catch {
       await new Promise(r => setTimeout(r, 2800))
-      router.push('/ai-plan')
+      router.push('/dashboard')
     }
   }
 
@@ -961,11 +961,37 @@ export default function OnboardingPage() {
               type="range"
               min={500}
               max={500000}
-              step={500}
               value={budget}
               onChange={e => setBudget(Number(e.target.value))}
               className="budget-range"
             />
+
+            {/* Typeable budget input */}
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-[13px] font-medium" style={{ fontFamily: 'var(--font-space)', color: 'var(--muted)' }}>$</span>
+              <input
+                type="number"
+                min={500}
+                max={500000}
+                value={budget}
+                onChange={e => {
+                  const val = Number(e.target.value)
+                  if (!isNaN(val)) setBudget(Math.min(500000, Math.max(500, val)))
+                }}
+                className="flex-1 bg-white border rounded-xl px-4 outline-none transition-colors duration-200"
+                style={{
+                  fontFamily: 'var(--font-space)', color: 'var(--charcoal)',
+                  borderColor: 'rgba(74,14,110,0.12)', height: 44, fontSize: '0.9375rem',
+                }}
+                onFocus={e => { e.currentTarget.style.borderColor = 'var(--plum)' }}
+                onBlur={e => {
+                  e.currentTarget.style.borderColor = 'rgba(74,14,110,0.12)'
+                  const val = Number(e.target.value)
+                  if (isNaN(val) || val < 500) setBudget(500)
+                  else if (val > 500000) setBudget(500000)
+                }}
+              />
+            </div>
 
             {/* Budget presets */}
             <div className="flex gap-2 mb-6">
