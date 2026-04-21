@@ -167,8 +167,8 @@ function StepLabel({ step }: { step: string }) {
 function StepQuestion({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="font-bold tracking-[-0.5px] leading-[1.15]"
-      style={{ fontFamily: 'var(--font-syne)', color: 'var(--charcoal)', fontWeight: 700, fontSize: 32 }}
+      className="font-bold tracking-[-0.5px] leading-[1.15] text-2xl md:text-[32px]"
+      style={{ fontFamily: 'var(--font-syne)', color: 'var(--charcoal)', fontWeight: 700 }}
     >{children}</div>
   )
 }
@@ -220,19 +220,11 @@ function SplitShell({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex" style={{ minHeight: '100vh', background: '#fff' }}>
-      {/* Left panel — sticky, image + plum overlay */}
+    <div className="flex flex-col lg:flex-row" style={{ minHeight: '100vh', background: '#fff' }}>
+      {/* Left panel — image banner on mobile, sticky full-height on lg */}
       <div
-        className="hidden lg:block flex-shrink-0"
-        style={{
-          width: '40%',
-          minWidth: 340,
-          position: 'sticky',
-          top: 0,
-          height: '100vh',
-          overflow: 'hidden',
-          background: 'var(--plum)',
-        }}
+        className="relative overflow-hidden flex-shrink-0 w-full h-[200px] lg:w-[40%] lg:min-w-[340px] lg:h-screen lg:sticky lg:top-0"
+        style={{ background: 'var(--plum)' }}
       >
         {/* Background photo */}
         <div style={{
@@ -243,12 +235,11 @@ function SplitShell({
         }} />
         {/* Dark plum overlay */}
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,26,46,0.7)', zIndex: 1 }} />
-        {/* Content */}
-        <div style={{
+        {/* Content — hidden on mobile, shown on lg */}
+        <div className="hidden lg:flex" style={{
           position: 'absolute',
           inset: 0,
           zIndex: 2,
-          display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           padding: '3rem 3.5rem',
@@ -270,7 +261,7 @@ function SplitShell({
         </div>
 
         {/* Content */}
-        <div style={{ maxWidth: 520, margin: '0 auto', padding: '3rem 2.5rem 5rem' }}>
+        <div className="px-6 py-8 pb-16 md:px-10 md:py-12 md:pb-20" style={{ maxWidth: 520, margin: '0 auto' }}>
           {children}
         </div>
       </div>
@@ -461,7 +452,7 @@ export default function OnboardingPage() {
 
   return (
     <div
-      className={`${syne.variable} ${spaceGrotesk.variable} ${cormorant.variable}`}
+      className={`${syne.variable} ${spaceGrotesk.variable} ${cormorant.variable} overflow-x-hidden`}
       style={{ fontFamily: 'var(--font-space), sans-serif' }}
     >
       <style>{`
@@ -472,22 +463,10 @@ export default function OnboardingPage() {
 
       {/* ── SCREEN 0: SPLASH ─────────────────────────────────────────────── */}
       {screen === 0 && (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'row',
-          minHeight: '100vh',
-          width: '100%',
-          overflow: 'hidden',
-        }}>
+        <div className="flex flex-col md:flex-row overflow-x-hidden" style={{ minHeight: '100vh', width: '100%' }}>
 
           {/* ── LEFT PANEL (60%) ── */}
-          <div style={{
-            width: '60%',
-            minHeight: '100vh',
-            position: 'relative',
-            overflow: 'hidden',
-            flexShrink: 0,
-          }}>
+          <div className="relative overflow-hidden flex-shrink-0 w-full h-[200px] md:w-[60%] md:h-auto md:min-h-screen">
             <div style={{
               position: 'absolute', inset: 0,
               backgroundImage: "url('/images/Hero.jpg')",
@@ -503,19 +482,19 @@ export default function OnboardingPage() {
 
             {/* Logo — top left */}
             <a href="/" style={{
-              position: 'absolute', top: 40, left: 60,
+              position: 'absolute', top: 20, left: 24,
               zIndex: 2, textDecoration: 'none',
             }}>
               <span style={{
                 fontFamily: 'var(--font-syne)', fontWeight: 800,
-                fontSize: 28, letterSpacing: '-0.03em', color: 'white',
+                fontSize: 24, letterSpacing: '-0.03em', color: 'white',
               }}>
                 evnti<span style={{ color: 'var(--lavender)' }}>.</span>
               </span>
             </a>
 
-            {/* Bottom-left content */}
-            <div style={{
+            {/* Bottom-left content — hidden on mobile */}
+            <div className="hidden md:block" style={{
               position: 'absolute', bottom: 60, left: 60,
               zIndex: 2, maxWidth: 480,
               animation: 'fadeUp 0.6s 0.1s ease both',
@@ -569,15 +548,8 @@ export default function OnboardingPage() {
           </div>
 
           {/* ── RIGHT PANEL (40%) ── */}
-          <div style={{
-            width: '40%',
-            minHeight: '100vh',
+          <div className="w-full md:w-[40%] flex-shrink-0 flex items-center justify-center px-6 py-10 md:px-12 md:py-[60px]" style={{
             background: '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '60px 48px',
-            flexShrink: 0,
             boxSizing: 'border-box',
           }}>
             <div style={{
