@@ -252,6 +252,9 @@ export default function AIPlanPage() {
   const [loading, setLoading] = useState(false)
   const [eventContext, setEventContext] = useState<EventContext | null>(null)
   const [hasEventContext, setHasEventContext] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [credits, setCredits] = useState<number | null>(null)
+  const [noCredits, setNoCredits] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -262,6 +265,22 @@ export default function AIPlanPage() {
         const supabase = getSupabaseClient()
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) {
+          setMessages([{ role: 'assistant', content: GENERIC_GREETING }])
+          return
+        }
+
+        setUserId(user.id)
+
+        // Fetch credits
+        const { data: userData } = await supabase
+          .from('users')
+          .select('eve_credits')
+          .eq('id', user.id)
+          .single()
+        const userCredits = userData?.eve_credits ?? 0
+        setCredits(userCredits)
+        if (userCredits <= 0) {
+          setNoCredits(true)
           setMessages([{ role: 'assistant', content: GENERIC_GREETING }])
           return
         }
@@ -290,10 +309,18 @@ export default function AIPlanPage() {
             body: JSON.stringify({
               messages: [{ role: 'user', content: 'Please give me an opening plan based on my event details.' }],
               eventContext: eventData,
+              user_id: user.id,
             }),
           })
           const json = await res.json()
-          setMessages([{ role: 'assistant', content: json.response ?? GENERIC_GREETING }])
+          if (json.error === 'no_credits') {
+            setNoCredits(true)
+            setCredits(0)
+            setMessages([{ role: 'assistant', content: GENERIC_GREETING }])
+          } else {
+            setCredits(c => (c !== null ? c - 1 : c))
+            setMessages([{ role: 'assistant', content: json.response ?? GENERIC_GREETING }])
+          }
         } catch {
           setMessages([{ role: 'assistant', content: GENERIC_GREETING }])
         } finally {
@@ -313,7 +340,7 @@ export default function AIPlanPage() {
   }, [messages, loading])
 
   async function sendMessage(text: string) {
-    if (!text.trim() || loading) return
+    if (!text.trim() || loading || noCredits) return
 
     const userMessage: Message = { role: 'user', content: text.trim() }
     const updatedMessages = [...messages, userMessage]
@@ -328,10 +355,20 @@ export default function AIPlanPage() {
         body: JSON.stringify({
           messages: updatedMessages,
           eventContext,
+          user_id: userId,
         }),
       })
 
       const data = await res.json()
+
+      if (data.error === 'no_credits') {
+        setNoCredits(true)
+        setCredits(0)
+        setMessages((prev) => prev.slice(0, -1)) // remove the user message
+        return
+      }
+
+      setCredits(c => (c !== null ? Math.max(0, c - 1) : c))
       const aiMessage: Message = {
         role: 'assistant',
         content: data.response ?? data.error ?? 'Something went wrong.',
@@ -493,21 +530,57 @@ export default function AIPlanPage() {
         style={{ borderColor: 'rgba(255,255,255,0.08)', background: '#1A1A2E' }}
       >
         <div className="max-w-[720px] mx-auto">
+
+          {/* Credit counter / no-credits banner */}
+          {noCredits ? (
+            <div
+              className="rounded-2xl px-5 py-4 mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+              style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)' }}
+            >
+              <p className="text-sm" style={{ color: '#FCA5A5', fontFamily: "'Space Grotesk', sans-serif", margin: 0 }}>
+                You&apos;ve used all your Eve credits. Upgrade to get more.
+              </p>
+              <button
+                style={{
+                  background: '#4A0E6E', color: 'white', border: 'none',
+                  borderRadius: 100, padding: '0.45rem 1.25rem',
+                  fontFamily: "'Space Grotesk', sans-serif", fontSize: '0.8rem', fontWeight: 600,
+                  cursor: 'pointer', flexShrink: 0,
+                }}
+              >
+                Upgrade
+              </button>
+            </div>
+          ) : credits !== null && (
+            <p
+              className="text-xs mb-2"
+              style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                color: credits > 5 ? '#4ade80' : credits >= 3 ? '#fbbf24' : '#f87171',
+                textAlign: 'right',
+              }}
+            >
+              {credits} credit{credits !== 1 ? 's' : ''} remaining
+            </p>
+          )}
+
           <div className="flex gap-2 items-end">
             <textarea
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask me anything about your event..."
+              placeholder={noCredits ? 'Upgrade to continue chatting with Eve...' : 'Ask me anything about your event...'}
+              disabled={noCredits}
               rows={1}
               className="flex-1 resize-none rounded-2xl px-4 py-3 text-sm outline-none border-0"
               style={{
-                background: 'white',
-                color: '#1A1A2E',
+                background: noCredits ? 'rgba(255,255,255,0.05)' : 'white',
+                color: noCredits ? 'rgba(255,255,255,0.3)' : '#1A1A2E',
                 fontFamily: "'Space Grotesk', sans-serif",
                 maxHeight: 120,
                 lineHeight: '1.5',
+                cursor: noCredits ? 'not-allowed' : undefined,
               }}
               onInput={(e) => {
                 const el = e.currentTarget
@@ -517,11 +590,12 @@ export default function AIPlanPage() {
             />
             <button
               onClick={() => sendMessage(input)}
-              disabled={!input.trim() || loading}
+              disabled={!input.trim() || loading || noCredits}
               className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center border-0 cursor-pointer transition-opacity duration-150"
               style={{
                 background: '#4A0E6E',
-                opacity: !input.trim() || loading ? 0.5 : 1,
+                opacity: !input.trim() || loading || noCredits ? 0.5 : 1,
+                cursor: noCredits ? 'not-allowed' : 'pointer',
               }}
               aria-label="Send message"
             >

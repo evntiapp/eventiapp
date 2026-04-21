@@ -19,6 +19,13 @@ const ADMIN_EMAILS = [
 type ApplicationStatus = 'pending' | 'approved' | 'declined'
 type FilterTab = 'all' | ApplicationStatus
 
+interface UserRow {
+  id: string
+  email: string | null
+  full_name: string | null
+  eve_credits: number | null
+}
+
 interface VendorProfile {
   id: string
   user_id: string | null
@@ -62,11 +69,15 @@ function pricingLabel(from: number | null, to: number | null) {
 
 export default function AdminPage() {
   const router = useRouter()
-  const [loading, setLoading]       = useState(true)
-  const [vendors, setVendors]       = useState<VendorProfile[]>([])
-  const [activeTab, setActiveTab]   = useState<FilterTab>('all')
+  const [loading, setLoading]             = useState(true)
+  const [vendors, setVendors]             = useState<VendorProfile[]>([])
+  const [activeTab, setActiveTab]         = useState<FilterTab>('all')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
-  const [greeting, setGreeting]     = useState('')
+  const [greeting, setGreeting]           = useState('')
+  const [users, setUsers]                 = useState<UserRow[]>([])
+  const [creditInputs, setCreditInputs]   = useState<Record<string, string>>({})
+  const [resetLoading, setResetLoading]   = useState<string | null>(null)
+  const [resetMsg, setResetMsg]           = useState<Record<string, string>>({})
 
   useEffect(() => {
     async function init() {
@@ -96,6 +107,7 @@ export default function AdminPage() {
       setGreeting(firstName.charAt(0).toUpperCase() + firstName.slice(1))
 
       await fetchVendors()
+      await fetchUsers()
       setLoading(false)
     }
     init()
@@ -109,6 +121,45 @@ export default function AdminPage() {
       .select('*')
       .order('created_at', { ascending: false })
     setVendors((data as VendorProfile[]) ?? [])
+  }
+
+  async function fetchUsers() {
+    const supabase = getSupabaseClient()
+    const { data } = await supabase
+      .from('users')
+      .select('id, email, full_name, eve_credits')
+      .order('full_name', { ascending: true })
+    const rows = (data as UserRow[]) ?? []
+    setUsers(rows)
+    const inputs: Record<string, string> = {}
+    rows.forEach(u => { inputs[u.id] = String(u.eve_credits ?? 0) })
+    setCreditInputs(inputs)
+  }
+
+  async function resetCredits(userId: string) {
+    const credits = parseInt(creditInputs[userId] ?? '0', 10)
+    if (isNaN(credits) || credits < 0) return
+    setResetLoading(userId)
+    setResetMsg(prev => ({ ...prev, [userId]: '' }))
+
+    const supabase = getSupabaseClient()
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token ?? ''
+
+    const res = await fetch('/api/credits/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ user_id: userId, credits }),
+    })
+    const json = await res.json()
+    setResetLoading(null)
+    if (json.success) {
+      setResetMsg(prev => ({ ...prev, [userId]: 'Updated' }))
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, eve_credits: credits } : u))
+      setTimeout(() => setResetMsg(prev => ({ ...prev, [userId]: '' })), 2000)
+    } else {
+      setResetMsg(prev => ({ ...prev, [userId]: 'Error' }))
+    }
   }
 
   async function updateStatus(id: string, status: ApplicationStatus) {
@@ -520,6 +571,117 @@ export default function AdminPage() {
             })}
           </div>
         )}
+
+        {/* ── CREDITS SECTION ────────────────────────────────────────────────── */}
+        <div className="mt-14">
+          <h2 style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: '1.25rem', color: '#1A1A2E', marginBottom: '0.375rem' }}>
+            Eve Credits
+          </h2>
+          <p style={{ fontFamily: 'var(--font-space)', fontSize: '0.85rem', color: '#7C6B8A', marginBottom: '1.5rem' }}>
+            Set or reset the number of Eve AI credits for each user.
+          </p>
+
+          {users.length === 0 ? (
+            <div
+              className="rounded-2xl flex items-center justify-center"
+              style={{ height: 120, border: '1.5px dashed rgba(74,14,110,0.15)', background: 'white' }}
+            >
+              <span style={{ fontFamily: 'var(--font-space)', fontSize: '0.9rem', color: '#9CA3AF' }}>No users found.</span>
+            </div>
+          ) : (
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'white', border: '1px solid rgba(74,14,110,0.07)', boxShadow: '0 1px 4px rgba(74,14,110,0.04)' }}>
+              {/* Table header */}
+              <div
+                className="grid grid-cols-[1fr_auto_180px_80px] gap-4 px-6 py-3"
+                style={{ borderBottom: '1px solid rgba(74,14,110,0.07)', background: 'rgba(248,244,252,0.6)' }}
+              >
+                {['User', 'Current credits', 'Set credits', ''].map(h => (
+                  <span key={h} style={{ fontFamily: 'var(--font-space)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9CA3AF' }}>
+                    {h}
+                  </span>
+                ))}
+              </div>
+
+              {users.map((u, i) => {
+                const busy = resetLoading === u.id
+                const msg  = resetMsg[u.id] ?? ''
+                const credits = u.eve_credits ?? 0
+                const creditColor = credits > 5 ? '#15803D' : credits >= 3 ? '#B45309' : '#DC2626'
+                return (
+                  <div
+                    key={u.id}
+                    className="grid grid-cols-[1fr_auto_180px_80px] gap-4 items-center px-6 py-4"
+                    style={{ borderBottom: i < users.length - 1 ? '1px solid rgba(74,14,110,0.05)' : 'none' }}
+                  >
+                    {/* User info */}
+                    <div>
+                      <div style={{ fontFamily: 'var(--font-syne)', fontSize: '0.875rem', fontWeight: 600, color: '#1A1A2E' }}>
+                        {u.full_name ?? '—'}
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-space)', fontSize: '0.75rem', color: '#9CA3AF', marginTop: 1 }}>
+                        {u.email ?? '—'}
+                      </div>
+                    </div>
+
+                    {/* Current credits badge */}
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: '0.9rem',
+                        color: creditColor,
+                        background: credits > 5 ? 'rgba(21,128,61,0.08)' : credits >= 3 ? 'rgba(180,83,9,0.08)' : 'rgba(220,38,38,0.08)',
+                        borderRadius: 100, padding: '0.2rem 0.75rem',
+                        minWidth: 40, textAlign: 'center',
+                      }}
+                    >
+                      {credits}
+                    </span>
+
+                    {/* Input */}
+                    <input
+                      type="number"
+                      min={0}
+                      value={creditInputs[u.id] ?? ''}
+                      onChange={e => setCreditInputs(prev => ({ ...prev, [u.id]: e.target.value }))}
+                      style={{
+                        fontFamily: 'var(--font-space)', fontSize: '0.875rem',
+                        border: '1.5px solid #DDB8F5', borderRadius: 10,
+                        padding: '0.4rem 0.75rem', outline: 'none',
+                        color: '#1A1A2E', width: '100%', boxSizing: 'border-box',
+                      }}
+                      onFocus={e => (e.currentTarget.style.borderColor = '#4A0E6E')}
+                      onBlur={e => (e.currentTarget.style.borderColor = '#DDB8F5')}
+                    />
+
+                    {/* Reset button */}
+                    <div className="flex flex-col items-center gap-1">
+                      <button
+                        onClick={() => resetCredits(u.id)}
+                        disabled={busy}
+                        style={{
+                          height: 36, borderRadius: 10, border: 'none',
+                          background: busy ? '#7C6B8A' : '#4A0E6E',
+                          color: 'white', fontFamily: 'var(--font-syne)',
+                          fontSize: '0.8rem', fontWeight: 700,
+                          cursor: busy ? 'not-allowed' : 'pointer',
+                          padding: '0 1rem', whiteSpace: 'nowrap',
+                          transition: 'background 0.15s',
+                        }}
+                      >
+                        {busy ? '…' : 'Reset'}
+                      </button>
+                      {msg && (
+                        <span style={{ fontFamily: 'var(--font-space)', fontSize: '0.68rem', color: msg === 'Updated' ? '#15803D' : '#DC2626', fontWeight: 600 }}>
+                          {msg}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   )

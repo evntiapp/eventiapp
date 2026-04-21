@@ -48,8 +48,30 @@ You have access to evnti's verified vendor list. ALWAYS recommend specific vendo
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { messages, eventContext } = body
+    const { messages, eventContext, user_id } = body
 
+    // ── Credit check ──────────────────────────────────────────────────────────
+    let currentCredits: number | null = null
+
+    if (user_id) {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('eve_credits')
+        .eq('id', user_id)
+        .single()
+
+      if (userData) {
+        currentCredits = userData.eve_credits ?? 0
+        if (currentCredits <= 0) {
+          return NextResponse.json(
+            { error: 'no_credits', message: 'You have used all your Eve credits.' },
+            { status: 429 }
+          )
+        }
+      }
+    }
+
+    // ── Vendor list ───────────────────────────────────────────────────────────
     const { data: vendors } = await supabase
       .from('vendor_profiles')
       .select('business_name, category, location, pricing_from, pricing_to, description')
@@ -65,6 +87,7 @@ export async function POST(req: NextRequest) {
 Current verified vendors on evnti:
 ${vendorList}`
 
+    // ── Build messages ────────────────────────────────────────────────────────
     let messagesWithContext = messages
 
     if (eventContext) {
@@ -76,6 +99,7 @@ ${vendorList}`
       ]
     }
 
+    // ── AI call ───────────────────────────────────────────────────────────────
     const message = await anthropic.messages.create({
       model: 'claude-opus-4-5',
       max_tokens: 300,
@@ -84,6 +108,14 @@ ${vendorList}`
     })
 
     const text = message.content[0].type === 'text' ? message.content[0].text : ''
+
+    // ── Decrement credits ─────────────────────────────────────────────────────
+    if (user_id && currentCredits !== null) {
+      await supabase
+        .from('users')
+        .update({ eve_credits: currentCredits - 1 })
+        .eq('id', user_id)
+    }
 
     return NextResponse.json({ response: text })
   } catch (error) {
