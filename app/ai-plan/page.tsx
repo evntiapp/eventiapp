@@ -18,7 +18,197 @@ interface EventContext {
   vision?: string
   style?: string
   additional_notes?: string
+  keywords?: string[]
+  colors?: string[]
   [key: string]: unknown
+}
+
+const COLOR_MAP: Record<string, string> = {
+  'Midnight': '#1A1A2E',
+  'Lavender': '#DDB8F5',
+  'Champagne': '#F7E7CE',
+  'Gold': '#D4AC0D',
+  'White': '#FFFFFF',
+  'Black': '#000000',
+  'Blush': '#FFB6C1',
+  'Sage': '#B2C9AD',
+  'Navy': '#1B2A4A',
+  'Dusty Rose': '#C4817E',
+  'Emerald': '#006400',
+  'Burgundy': '#800020',
+}
+
+// Requires NEXT_PUBLIC_UNSPLASH_ACCESS_KEY in .env.local
+// Get free key at unsplash.com/developers
+
+const FALLBACK_IMAGES = ['/images/Hero.jpg', '/images/venues.jpg', '/images/feature.jpg']
+
+async function fetchUnsplashImage(keyword: string): Promise<string> {
+  const query = encodeURIComponent(`${keyword} event wedding party elegant`)
+  const response = await fetch(
+    `https://api.unsplash.com/search/photos?query=${query}&per_page=1&orientation=landscape`,
+    {
+      headers: {
+        Authorization: `Client-ID ${process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY}`,
+      },
+    }
+  )
+  const data = await response.json()
+  return data.results?.[0]?.urls?.regular || '/images/Hero.jpg'
+}
+
+function MoodBoard({ keywords, colors }: { keywords: string[]; colors: string[] }) {
+  const [hoveredColor, setHoveredColor] = useState<string | null>(null)
+  const [images, setImages] = useState<string[]>([])
+  const [imagesLoading, setImagesLoading] = useState(true)
+
+  useEffect(() => {
+    const queryKeywords = keywords.slice(0, 3)
+    if (queryKeywords.length === 0) {
+      setImages(FALLBACK_IMAGES)
+      setImagesLoading(false)
+      return
+    }
+    Promise.all(queryKeywords.map((kw) => fetchUnsplashImage(kw)))
+      .then((results) => {
+        // Pad to 3 if fewer than 3 keywords
+        const padded = [...results]
+        let fi = 0
+        while (padded.length < 3) {
+          padded.push(FALLBACK_IMAGES[fi++ % FALLBACK_IMAGES.length])
+        }
+        setImages(padded)
+      })
+      .catch(() => setImages(FALLBACK_IMAGES))
+      .finally(() => setImagesLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return (
+    <div
+      style={{
+        background: '#FFFFFF',
+        borderRadius: 16,
+        padding: 24,
+        maxWidth: 720,
+        margin: '0 auto 24px',
+      }}
+    >
+      <p
+        style={{
+          fontFamily: "'Syne', sans-serif",
+          color: '#2D2D2D',
+          fontSize: 16,
+          fontWeight: 700,
+          marginBottom: 16,
+        }}
+      >
+        Your Event Mood
+      </p>
+
+      {keywords.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {keywords.map((kw) => (
+            <span
+              key={kw}
+              style={{
+                background: 'rgba(74,14,110,0.08)',
+                color: '#4A0E6E',
+                border: '1px solid rgba(74,14,110,0.15)',
+                borderRadius: 20,
+                padding: '6px 14px',
+                fontSize: 13,
+                fontFamily: "'Space Grotesk', sans-serif",
+              }}
+            >
+              {kw}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {colors.length > 0 && (
+        <div className="flex flex-wrap gap-3 mb-4">
+          {colors.map((color) => {
+            const hex = COLOR_MAP[color] ?? '#9CA3AF'
+            const isWhite = color === 'White'
+            return (
+              <div
+                key={color}
+                className="relative"
+                onMouseEnter={() => setHoveredColor(color)}
+                onMouseLeave={() => setHoveredColor(null)}
+              >
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '50%',
+                    background: hex,
+                    border: isWhite ? '1px solid #eee' : undefined,
+                    cursor: 'default',
+                  }}
+                />
+                {hoveredColor === color && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 38,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      background: '#1A1A2E',
+                      color: '#fff',
+                      fontSize: 11,
+                      padding: '3px 8px',
+                      borderRadius: 6,
+                      whiteSpace: 'nowrap',
+                      fontFamily: "'Space Grotesk', sans-serif",
+                      pointerEvents: 'none',
+                      zIndex: 10,
+                    }}
+                  >
+                    {color}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <div className="flex gap-3">
+        {imagesLoading
+          ? [0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="animate-pulse bg-gray-200"
+                style={{ flex: 1, height: 140, borderRadius: 10 }}
+              />
+            ))
+          : images.map((src, i) => (
+              <div key={i} style={{ flex: 1, height: 140, borderRadius: 10, overflow: 'hidden' }}>
+                <img
+                  src={src}
+                  alt=""
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                />
+              </div>
+            ))}
+      </div>
+
+      <p
+        style={{
+          marginTop: 8,
+          fontSize: 10,
+          color: 'rgba(0,0,0,0.3)',
+          fontFamily: "'Space Grotesk', sans-serif",
+          textAlign: 'right',
+        }}
+      >
+        Photos via Unsplash
+      </p>
+    </div>
+  )
 }
 
 function stripMarkdown(text: string): string {
@@ -215,6 +405,16 @@ export default function AIPlanPage() {
           Your personal event planning assistant.
         </p>
       </div>
+
+      {/* Mood board */}
+      {hasEventContext && eventContext && ((eventContext.keywords?.length ?? 0) > 0 || (eventContext.colors?.length ?? 0) > 0) && (
+        <div className="px-4 flex-shrink-0">
+          <MoodBoard
+            keywords={eventContext.keywords ?? []}
+            colors={eventContext.colors ?? []}
+          />
+        </div>
+      )}
 
       {/* Chat area */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">

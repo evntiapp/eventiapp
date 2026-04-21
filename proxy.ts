@@ -18,14 +18,6 @@ const PROTECTED_ROUTES = [
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  const isProtected = PROTECTED_ROUTES.some(
-    route => pathname === route || pathname.startsWith(route + '/')
-  )
-
-  if (!isProtected) {
-    return NextResponse.next()
-  }
-
   let response = NextResponse.next({
     request: { headers: request.headers },
   })
@@ -49,9 +41,14 @@ export async function proxy(request: NextRequest) {
     }
   )
 
+  // Refresh the session — updates cookie expiry on every request
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) {
+  const isProtected = PROTECTED_ROUTES.some(
+    route => pathname === route || pathname.startsWith(route + '/')
+  )
+
+  if (isProtected && !user) {
     const signInUrl = new URL('/auth/signin', request.url)
     signInUrl.searchParams.set('redirectTo', pathname)
     return NextResponse.redirect(signInUrl)
@@ -62,6 +59,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|images/|fonts/|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
