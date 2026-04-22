@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     const { messages, eventContext, user_id } = body
 
     // ── Credit check ──────────────────────────────────────────────────────────
-    let currentCredits: number | null = null
+    let currentCredits: number = 0
 
     if (user_id) {
       const { data: userData } = await supabase
