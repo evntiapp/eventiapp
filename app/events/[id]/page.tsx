@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
+import { Home, Store, Sparkles, Calendar, Grid } from 'lucide-react'
 
 const syne = Syne({ subsets: ['latin'], weight: ['400', '600', '700', '800'], variable: '--font-syne' })
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700'], variable: '--font-space' })
@@ -587,9 +588,11 @@ export default function EventSummaryPage() {
               </h3>
               <div className="flex flex-col gap-2">
                 {[
-                  { label: 'Browse vendors', href: '/vendors' },
-                  { label: 'My bookings',    href: '/dashboard' },
-                  { label: 'My schedule',    href: '/schedule' },
+                  { label: 'Browse vendors',  href: '/vendors' },
+                  { label: 'My bookings',     href: '/dashboard#bookings-section' },
+                  { label: 'My schedule',     href: `/schedule?eventId=${id}` },
+                  { label: 'Timeline',        href: `/timeline?eventId=${id}` },
+                  { label: 'Budget tracker',  href: `/budget?eventId=${id}` },
                 ].map(({ label, href }) => (
                   <Link
                     key={label}
@@ -612,6 +615,36 @@ export default function EventSummaryPage() {
           </div>
         </div>
       </div>
+
+      {/* ── MOBILE BOTTOM NAV ── */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#EDE5F7]">
+        <div className="flex items-stretch h-16">
+          {([
+            { icon: <Home     size={20} />, label: 'Home',     href: '/dashboard' },
+            { icon: <Store    size={20} />, label: 'Vendors',  href: '/vendors' },
+            { icon: <Sparkles size={20} />, label: 'Eve',      href: '/ai-plan' },
+            { icon: <Calendar size={20} />, label: 'Timeline', href: `/timeline?eventId=${id}` },
+            { icon: <Grid     size={20} />, label: 'Schedule', href: `/schedule?eventId=${id}` },
+          ] as { icon: React.ReactNode; label: string; href: string }[]).map(item => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="flex-1 flex flex-col items-center justify-center gap-0"
+            >
+              <span style={{ color: '#7C6B8A' }}>{item.icon}</span>
+              <span
+                className="text-[10px] font-semibold mt-0.5"
+                style={{ fontFamily: 'var(--font-space)', color: '#7C6B8A' }}
+              >
+                {item.label}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom nav spacer on mobile */}
+      <div className="md:hidden h-16" />
     </div>
   )
 }

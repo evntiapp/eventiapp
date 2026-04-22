@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
+import { Home, Store, Sparkles, Calendar, Grid } from 'lucide-react'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -158,8 +159,9 @@ export default function ClientDashboardPage() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [events, setEvents] = useState<ClientEvent[]>([])
   const [signingOut, setSigningOut] = useState(false)
-  const [fabOpen, setFabOpen]       = useState(false)
-  const [activeNav, setActiveNav]   = useState<string>('My Events')
+  const [fabOpen, setFabOpen]         = useState(false)
+  const [activeNav, setActiveNav]     = useState<string>('My Events')
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false)
 
   const loadData = useCallback(async () => {
     const supabase = getSupabaseClient()
@@ -295,12 +297,15 @@ export default function ClientDashboardPage() {
           <div className="mt-7 -mx-6 px-6 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             <div className="flex gap-2 pb-1" style={{ minWidth: 'max-content' }}>
               {([
-                { label: 'My Events',      action: () => { setActiveNav('My Events'); setTimeout(() => document.getElementById('events-section')?.scrollIntoView({ behavior: 'smooth' }), 10) } },
+                { label: 'My Events',      action: () => { setActiveNav('My Events');   setTimeout(() => document.getElementById('events-section')?.scrollIntoView({ behavior: 'smooth' }), 10) } },
                 { label: 'My Bookings',    action: () => { setActiveNav('My Bookings'); setTimeout(() => document.getElementById('bookings-section')?.scrollIntoView({ behavior: 'smooth' }), 10) } },
                 { label: 'Find Vendors',   href: '/vendors' },
                 { label: 'Plan New Event', href: '/onboarding' },
                 { label: 'Ask Eve',        href: '/ai-plan' },
-                { label: 'My Schedule',    href: '/schedule' },
+                { label: 'Timeline',       href: '/timeline' },
+                { label: 'Budget',         href: '/budget' },
+                { label: 'Schedule',       href: '/schedule' },
+                { label: 'Messages',       href: '/messages' },
               ] as { label: string; href?: string; action?: () => void }[]).map(item => {
                 const active = activeNav === item.label
                 const pillStyle: React.CSSProperties = {
@@ -592,27 +597,38 @@ export default function ClientDashboardPage() {
                       </div>
 
                       {/* Actions */}
-                      {booking.status === 'confirmed' && vendor && (
-                        <Link
-                          href={`/vendors/${booking.vendor_id}/book/payment?bookingId=${booking.id}&amount=${booking.deposit_amount ?? 0}&vendorName=${encodeURIComponent(vendor.business_name)}`}
-                          className="inline-block px-4 py-2 rounded-xl text-xs font-bold text-white hover:opacity-90 transition-opacity"
-                          style={{
-                            background: 'linear-gradient(135deg, #4A0E6E 0%, #6B1F9A 100%)',
-                            fontFamily: 'var(--font-syne-cd)',
-                          }}
-                        >
-                          Pay deposit
-                        </Link>
-                      )}
-                      {booking.status === 'paid' && (
-                        <Link
-                          href={`/vendors/${booking.vendor_id}`}
-                          className="text-xs font-semibold text-[#4A0E6E] underline underline-offset-2 hover:opacity-70 transition-opacity"
-                          style={{ fontFamily: 'var(--font-space-cd)' }}
-                        >
-                          View vendor
-                        </Link>
-                      )}
+                      <div className="flex flex-wrap items-center gap-3">
+                        {booking.status === 'confirmed' && vendor && (
+                          <Link
+                            href={`/vendors/${booking.vendor_id}/book/payment?bookingId=${booking.id}&amount=${booking.deposit_amount ?? 0}&vendorName=${encodeURIComponent(vendor.business_name)}`}
+                            className="inline-block px-4 py-2 rounded-xl text-xs font-bold text-white hover:opacity-90 transition-opacity"
+                            style={{
+                              background: 'linear-gradient(135deg, #4A0E6E 0%, #6B1F9A 100%)',
+                              fontFamily: 'var(--font-syne-cd)',
+                            }}
+                          >
+                            Pay deposit
+                          </Link>
+                        )}
+                        {booking.status === 'paid' && (
+                          <Link
+                            href={`/vendors/${booking.vendor_id}`}
+                            className="text-xs font-semibold text-[#4A0E6E] underline underline-offset-2 hover:opacity-70 transition-opacity"
+                            style={{ fontFamily: 'var(--font-space-cd)' }}
+                          >
+                            View vendor
+                          </Link>
+                        )}
+                        {booking.status !== 'declined' && (
+                          <Link
+                            href={`/messages?bookingId=${booking.id}`}
+                            className="text-xs font-semibold text-[#4A0E6E] hover:opacity-70 transition-opacity"
+                            style={{ fontFamily: 'var(--font-space-cd)' }}
+                          >
+                            Message vendor →
+                          </Link>
+                        )}
+                      </div>
                     </div>
                   )
                 })}
@@ -624,14 +640,17 @@ export default function ClientDashboardPage() {
         </div>
       </div>
 
-      {/* ── FAB ── */}
-      <div style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 50 }}>
+      {/* ── FAB (desktop only) ── */}
+      <div className="hidden md:block" style={{ position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 50 }}>
         {fabOpen && (
           <div className="flex flex-col items-end gap-2 mb-3" style={{ animation: 'fabUp 0.15s ease both' }}>
             {([
               { label: 'Plan new event', href: '/onboarding' },
               { label: 'Find vendors',   href: '/vendors' },
               { label: 'Ask Eve',        href: '/ai-plan' },
+              { label: 'Timeline',       href: '/timeline' },
+              { label: 'Budget',         href: '/budget' },
+              { label: 'Schedule',       href: '/schedule' },
             ] as { label: string; href: string }[]).map(item => (
               <Link
                 key={item.label}
@@ -661,6 +680,111 @@ export default function ClientDashboardPage() {
           +
         </button>
       </div>
+
+      {/* ── MOBILE BOTTOM NAV ── */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#EDE5F7]">
+        {/* More menu panel */}
+        {moreMenuOpen && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/20 z-40"
+              onClick={() => setMoreMenuOpen(false)}
+            />
+            <div
+              className="fixed bottom-16 left-0 right-0 z-50 bg-white border-t border-[#EDE5F7] rounded-t-2xl px-4 pt-4 pb-2"
+              style={{ boxShadow: '0 -4px 20px rgba(74,14,110,0.12)' }}
+            >
+              <p
+                className="text-[10px] font-bold uppercase tracking-widest text-[#7C6B8A] mb-3"
+                style={{ fontFamily: 'var(--font-space-cd)' }}
+              >
+                Navigate
+              </p>
+              <div className="grid grid-cols-4 gap-2 pb-2">
+                {([
+                  { label: 'My Events',    action: () => { document.getElementById('events-section')?.scrollIntoView({ behavior: 'smooth' }); setMoreMenuOpen(false) } },
+                  { label: 'Bookings',     action: () => { document.getElementById('bookings-section')?.scrollIntoView({ behavior: 'smooth' }); setMoreMenuOpen(false) } },
+                  { label: 'Find Vendors', href: '/vendors' },
+                  { label: 'Plan Event',   href: '/onboarding' },
+                  { label: 'Ask Eve',      href: '/ai-plan' },
+                  { label: 'Timeline',     href: '/timeline' },
+                  { label: 'Budget',       href: '/budget' },
+                  { label: 'Schedule',     href: '/schedule' },
+                  { label: 'Messages',     href: '/messages' },
+                ] as { label: string; href?: string; action?: () => void }[]).map(item =>
+                  item.href ? (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      onClick={() => setMoreMenuOpen(false)}
+                      className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-center"
+                      style={{ background: '#F8F4FC', fontFamily: 'var(--font-space-cd)' }}
+                    >
+                      <span className="text-[11px] font-semibold text-[#4A0E6E]">{item.label}</span>
+                    </Link>
+                  ) : (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={item.action}
+                      className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-center"
+                      style={{ background: '#F8F4FC', fontFamily: 'var(--font-space-cd)' }}
+                    >
+                      <span className="text-[11px] font-semibold text-[#4A0E6E]">{item.label}</span>
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Bottom bar */}
+        <div className="flex items-stretch h-16">
+          {([
+            { icon: <Home  size={20} />, label: 'Home',     href: '/dashboard' },
+            { icon: <Store size={20} />, label: 'Vendors',  href: '/vendors' },
+            { icon: <Sparkles size={20} />, label: 'Eve',   href: '/ai-plan' },
+            { icon: <Calendar size={20} />, label: 'Timeline', href: '/timeline' },
+            { icon: <Grid size={20} />,  label: 'More',     action: () => setMoreMenuOpen(o => !o) },
+          ] as { icon: React.ReactNode; label: string; href?: string; action?: () => void }[]).map(item => {
+            const isMore = item.label === 'More'
+            const active = isMore ? moreMenuOpen : false
+            const content = (
+              <>
+                <span style={{ color: active ? '#4A0E6E' : '#7C6B8A', transition: 'color 0.15s' }}>{item.icon}</span>
+                <span
+                  className="text-[10px] font-semibold mt-0.5"
+                  style={{ fontFamily: 'var(--font-syne-cd)', color: active ? '#4A0E6E' : '#7C6B8A' }}
+                >
+                  {item.label}
+                </span>
+              </>
+            )
+            return item.href ? (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="flex-1 flex flex-col items-center justify-center gap-0"
+              >
+                {content}
+              </Link>
+            ) : (
+              <button
+                key={item.label}
+                type="button"
+                onClick={item.action}
+                className="flex-1 flex flex-col items-center justify-center gap-0"
+              >
+                {content}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Bottom nav spacer on mobile */}
+      <div className="md:hidden h-16" />
 
       <style>{`
         @keyframes fabUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }

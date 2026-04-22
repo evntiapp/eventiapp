@@ -42,6 +42,7 @@ interface Booking {
   client_message: string | null
   status: string
   quoted_price: number | null
+  deposit_amount: number | null
   created_at: string
 }
 
@@ -75,13 +76,13 @@ function formatEventDate(iso: string): string {
 
 function thisMonthRevenue(bookings: Booking[]): number {
   const now = new Date()
+  const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
   return bookings
     .filter(b => {
-      if (b.status !== 'confirmed' || !b.quoted_price) return false
-      const d = new Date(b.created_at)
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+      if (b.status !== 'paid' || !b.deposit_amount) return false
+      return new Date(b.created_at) >= firstOfMonth
     })
-    .reduce((sum, b) => sum + (b.quoted_price ?? 0), 0)
+    .reduce((sum, b) => sum + (b.deposit_amount ?? 0), 0)
 }
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
@@ -275,6 +276,18 @@ function BookingCard({
           </button>
         </div>
       )}
+
+      {!isDeclined && (
+        <div className={`flex items-center ${isPending ? 'mt-3 pt-3' : 'pt-0'}`} style={isPending ? { borderTop: '1px solid rgba(74,14,110,0.08)' } : {}}>
+          <Link
+            href={`/messages?bookingId=${booking.id}`}
+            className="text-xs font-semibold text-[#4A0E6E] hover:opacity-70 transition-opacity"
+            style={{ fontFamily: 'var(--font-space-vd)' }}
+          >
+            Message client →
+          </Link>
+        </div>
+      )}
     </div>
   )
 }
@@ -438,10 +451,17 @@ export default function VendorDashboardPage() {
   if (!vendor) return null
 
   // ── Derived stats ──
-  const totalBookings = bookings.length
-  const pendingCount  = bookings.filter(b => b.status === 'pending').length
+  const totalBookings  = bookings.length
+  const pendingCount   = bookings.filter(b => b.status === 'pending').length
   const confirmedCount = bookings.filter(b => b.status === 'confirmed').length
-  const monthRevenue  = thisMonthRevenue(bookings)
+  const monthRevenue   = thisMonthRevenue(bookings)
+  const allTimeRevenue = bookings
+    .filter(b => b.status === 'paid' && b.deposit_amount)
+    .reduce((sum, b) => sum + (b.deposit_amount ?? 0), 0)
+  const pendingRevenue = bookings
+    .filter(b => b.status === 'confirmed' && b.deposit_amount)
+    .reduce((sum, b) => sum + (b.deposit_amount ?? 0), 0)
+  const paidBookings = bookings.filter(b => b.status === 'paid' || b.status === 'confirmed')
 
   const filteredBookings = filter === 'all'
     ? bookings
@@ -637,6 +657,125 @@ export default function VendorDashboardPage() {
                 ))}
               </div>
             )}
+            {/* ── Payment History ── */}
+            <div className="mt-10">
+              <h2
+                className="text-lg font-bold text-[#1A1A2E] mb-5"
+                style={{ fontFamily: 'var(--font-syne-vd)' }}
+              >
+                Payment History
+              </h2>
+              {paidBookings.length === 0 ? (
+                <div
+                  className="bg-white rounded-2xl p-6 text-center"
+                  style={{ boxShadow: '0 4px 24px rgba(74,14,110,0.08)' }}
+                >
+                  <p className="text-sm text-[#7C6B8A]" style={{ fontFamily: 'var(--font-space-vd)' }}>
+                    No payment records yet.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {paidBookings.map(booking => {
+                    const deposit   = booking.deposit_amount ?? 0
+                    const total     = booking.budget_for_vendor ?? 0
+                    const remaining = total - deposit
+                    const isPaid    = booking.status === 'paid'
+                    return (
+                      <div
+                        key={booking.id}
+                        className="bg-white rounded-2xl p-5"
+                        style={{ boxShadow: '0 4px 24px rgba(74,14,110,0.08)' }}
+                      >
+                        <div className="flex items-start justify-between gap-3 mb-4">
+                          <div>
+                            <p
+                              className="text-base font-bold text-[#1A1A2E]"
+                              style={{ fontFamily: 'var(--font-syne-vd)' }}
+                            >
+                              {booking.client_name}
+                            </p>
+                            <p className="text-xs text-[#7C6B8A] mt-0.5" style={{ fontFamily: 'var(--font-space-vd)' }}>
+                              {booking.event_type ?? 'Event'}
+                              {booking.event_date ? ` · ${formatEventDate(booking.event_date)}` : ''}
+                            </p>
+                          </div>
+                          <span
+                            className="px-2.5 py-1 rounded-full text-[10px] font-bold flex-shrink-0"
+                            style={{
+                              background: isPaid ? '#E6F7F2' : '#EFF6FF',
+                              color: isPaid ? '#0D9B6A' : '#1D4ED8',
+                              fontFamily: 'var(--font-syne-vd)',
+                            }}
+                          >
+                            {isPaid ? 'Paid' : 'Confirmed'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                          <div>
+                            <p
+                              className="text-[10px] uppercase tracking-widest text-[#7C6B8A] mb-1"
+                              style={{ fontFamily: 'var(--font-space-vd)' }}
+                            >
+                              Deposit received
+                            </p>
+                            <p
+                              className="text-sm font-bold text-[#0D9B6A]"
+                              style={{ fontFamily: 'var(--font-syne-vd)' }}
+                            >
+                              ${deposit.toLocaleString()}
+                            </p>
+                          </div>
+                          <div>
+                            <p
+                              className="text-[10px] uppercase tracking-widest text-[#7C6B8A] mb-1"
+                              style={{ fontFamily: 'var(--font-space-vd)' }}
+                            >
+                              Remaining balance
+                            </p>
+                            <p
+                              className="text-sm font-semibold text-[#7C6B8A]"
+                              style={{ fontFamily: 'var(--font-syne-vd)' }}
+                            >
+                              ${remaining.toLocaleString()}{' '}
+                              <span className="text-[10px] font-normal">collected directly</span>
+                            </p>
+                          </div>
+                          <div>
+                            <p
+                              className="text-[10px] uppercase tracking-widest text-[#7C6B8A] mb-1"
+                              style={{ fontFamily: 'var(--font-space-vd)' }}
+                            >
+                              Total booking value
+                            </p>
+                            <p
+                              className="text-sm font-bold text-[#1A1A2E]"
+                              style={{ fontFamily: 'var(--font-syne-vd)' }}
+                            >
+                              ${total.toLocaleString()}
+                            </p>
+                          </div>
+                          <div>
+                            <p
+                              className="text-[10px] uppercase tracking-widest text-[#7C6B8A] mb-1"
+                              style={{ fontFamily: 'var(--font-space-vd)' }}
+                            >
+                              Payment date
+                            </p>
+                            <p
+                              className="text-sm font-semibold text-[#1A1A2E]"
+                              style={{ fontFamily: 'var(--font-syne-vd)' }}
+                            >
+                              {formatDate(booking.created_at)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* ── RIGHT: Profile card ── */}
@@ -732,6 +871,68 @@ export default function VendorDashboardPage() {
                 >
                   View public profile
                 </Link>
+              </div>
+            </div>
+
+            {/* ── Revenue Summary card ── */}
+            <div
+              className="bg-white rounded-2xl p-6 mt-6"
+              style={{ boxShadow: '0 4px 24px rgba(74,14,110,0.1)' }}
+            >
+              <h3
+                className="text-sm font-bold text-[#1A1A2E] mb-4"
+                style={{ fontFamily: 'var(--font-syne-vd)' }}
+              >
+                Revenue Summary
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#7C6B8A]" style={{ fontFamily: 'var(--font-space-vd)' }}>
+                    This month
+                  </span>
+                  <span
+                    className="text-sm font-bold text-[#0D9B6A]"
+                    style={{ fontFamily: 'var(--font-syne-vd)' }}
+                  >
+                    ${monthRevenue.toLocaleString()}
+                  </span>
+                </div>
+                <div className="h-px bg-[#EDE5F7]" />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#7C6B8A]" style={{ fontFamily: 'var(--font-space-vd)' }}>
+                    All time
+                  </span>
+                  <span
+                    className="text-sm font-bold text-[#0D9B6A]"
+                    style={{ fontFamily: 'var(--font-syne-vd)' }}
+                  >
+                    ${allTimeRevenue.toLocaleString()}
+                  </span>
+                </div>
+                <div className="h-px bg-[#EDE5F7]" />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#7C6B8A]" style={{ fontFamily: 'var(--font-space-vd)' }}>
+                    Pending deposits
+                  </span>
+                  <span
+                    className="text-sm font-bold text-[#E67E22]"
+                    style={{ fontFamily: 'var(--font-syne-vd)' }}
+                  >
+                    ${pendingRevenue.toLocaleString()}
+                  </span>
+                </div>
+                <div className="h-px bg-[#EDE5F7]" />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#7C6B8A]" style={{ fontFamily: 'var(--font-space-vd)' }}>
+                    Upcoming bookings
+                  </span>
+                  <span
+                    className="text-sm font-bold text-[#1A1A2E]"
+                    style={{ fontFamily: 'var(--font-syne-vd)' }}
+                  >
+                    {confirmedCount}
+                  </span>
+                </div>
               </div>
             </div>
           </div>

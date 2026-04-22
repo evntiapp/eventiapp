@@ -1,665 +1,612 @@
 'use client'
-import { useState } from 'react'
-import { Syne, Epilogue } from 'next/font/google'
 
-const syne = Syne({ subsets: ['latin'], weight: ['400', '600', '700', '800'], variable: '--font-syne' })
-const epilogue = Epilogue({ subsets: ['latin'], weight: ['300', '400', '500', '600'], variable: '--font-epilogue' })
+/*
+  SQL — run once in Supabase SQL editor
+  ──────────────────────────────────────
+  create table messages (
+    id uuid primary key default gen_random_uuid(),
+    booking_id uuid references bookings(id) on delete cascade,
+    sender_id uuid references auth.users(id) on delete cascade,
+    body text not null,
+    read boolean default false,
+    created_at timestamptz default now()
+  );
 
-type Screen = 'inbox' | 'chat'
-type InboxFilter = 'all' | 'unread' | 'vendors' | 'ai'
+  alter table messages enable row level security;
 
-// ── Data types ─────────────────────────────────────────────────────────────────
-interface VendorThread {
-  id: string
-  name: string
-  avatarEmoji: string
-  avatarBg: string
-  preview: string
-  time: string
-  unreadCount?: number
-  isOnline?: boolean
-  isVerified?: boolean
-  isUnread?: boolean
+  -- participants can view messages on their bookings
+  create policy "participants view messages" on messages for select using (
+    exists (
+      select 1 from bookings b where b.id = messages.booking_id
+        and (
+          b.client_id = auth.uid()
+          or exists (select 1 from vendor_profiles vp where vp.id = b.vendor_id and vp.user_id = auth.uid())
+        )
+    )
+  );
+
+  -- participants can send messages
+  create policy "participants insert messages" on messages for insert with check (
+    sender_id = auth.uid()
+    and exists (
+      select 1 from bookings b where b.id = messages.booking_id
+        and (
+          b.client_id = auth.uid()
+          or exists (select 1 from vendor_profiles vp where vp.id = b.vendor_id and vp.user_id = auth.uid())
+        )
+    )
+  );
+
+  -- participants can mark messages read
+  create policy "participants update read" on messages for update using (
+    exists (
+      select 1 from bookings b where b.id = messages.booking_id
+        and (
+          b.client_id = auth.uid()
+          or exists (select 1 from vendor_profiles vp where vp.id = b.vendor_id and vp.user_id = auth.uid())
+        )
+    )
+  );
+
+  -- NOTE: bookings table must have a client_id uuid column:
+  -- alter table bookings add column if not exists client_id uuid references auth.users(id);
+*/
+
+import { useState, useEffect, useCallback, useRef } from 'react'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Syne, Space_Grotesk } from 'next/font/google'
+import { getSupabaseClient } from '@/lib/supabase'
+
+const syne = Syne({
+  subsets: ['latin'],
+  weight: ['400', '600', '700', '800'],
+  variable: '--font-syne-mg',
+})
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-space-mg',
+})
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface Conversation {
+  bookingId: string
+  otherName: string
+  eventType: string | null
+  eventDate: string | null
+  lastMessage: string | null
+  lastMessageAt: string | null
+  unreadCount: number
 }
 
-type MessageType = 'received' | 'sent' | 'ai'
-
-interface ChatMessage {
+interface Message {
   id: string
-  type: MessageType
-  text?: string
-  time: string
-  attachment?: { name: string; size: string }
-  isTyping?: boolean
+  booking_id: string
+  sender_id: string
+  body: string
+  read: boolean
+  created_at: string
 }
 
-// ── Static data ────────────────────────────────────────────────────────────────
-const INBOX_FILTERS: { id: InboxFilter; label: string }[] = [
-  { id: 'all', label: 'All (6)' },
-  { id: 'unread', label: 'Unread (3)' },
-  { id: 'vendors', label: 'Vendors' },
-  { id: 'ai', label: 'AI Assistant' },
-]
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-const VENDOR_THREADS: VendorThread[] = [
-  {
-    id: 'bloom',
-    name: 'Bloom & Co Florals',
-    avatarEmoji: '🌸',
-    avatarBg: 'linear-gradient(135deg,#E6F7F2,#A8DCC8)',
-    preview: 'Just sent over the contract for your review. Please sign when ready 🌸',
-    time: '2m ago',
-    unreadCount: 2,
-    isOnline: true,
-    isUnread: true,
-  },
-  {
-    id: 'lens',
-    name: 'Lens & Light Studio',
-    avatarEmoji: '📸',
-    avatarBg: 'linear-gradient(135deg,#F3E8FF,#DDB8F5)',
-    preview: 'Hi Aisha! Excited for Aug 14. Can we schedule a pre-wedding shoot?',
-    time: '1h ago',
-    unreadCount: 1,
-    isVerified: true,
-    isUnread: true,
-  },
-  {
-    id: 'dj',
-    name: 'DJ Smooth Houston',
-    avatarEmoji: '🎵',
-    avatarBg: 'linear-gradient(135deg,#FEF3E2,#FDDCB5)',
-    preview: 'Sounds good, I\'ll hold Aug 14. Send me the playlist when ready!',
-    time: 'Yesterday',
-    isVerified: true,
-  },
-  {
-    id: 'astorian',
-    name: 'The Astorian Venue',
-    avatarEmoji: '🏛️',
-    avatarBg: 'linear-gradient(135deg,#E3F2FD,#90CAF9)',
-    preview: 'Your venue walkthrough is confirmed for Aug 7 at 2PM.',
-    time: 'Jun 24',
-    isVerified: true,
-  },
-  {
-    id: 'glam',
-    name: 'Glam Squad HTX',
-    avatarEmoji: '💄',
-    avatarBg: 'linear-gradient(135deg,#FCE4EC,#F48FB1)',
-    preview: 'Your trial appointment is confirmed for Jul 5 at 10AM! 💄',
-    time: 'Jun 23',
-    isVerified: true,
-  },
-]
+function avatarColor(str: string): string {
+  const colors = ['#4A0E6E', '#0D9B6A', '#1D4ED8', '#E67E22', '#9C27B0']
+  let hash = 0
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash)
+  return colors[Math.abs(hash) % colors.length]
+}
 
-const CHAT_MESSAGES: ChatMessage[] = [
-  {
-    id: 'm1',
-    type: 'received',
-    text: 'Hi Aisha! So excited to be part of your big day 💐 I\'ve reviewed your mood board and I absolutely love the botanical garden direction you\'re going for.',
-    time: '9:14 AM',
-  },
-  {
-    id: 'm2',
-    type: 'received',
-    text: 'I\'m thinking lush greenery with blush peonies, white garden roses, and cascading eucalyptus. Does that resonate with your vision?',
-    time: '9:15 AM',
-  },
-  {
-    id: 'm3',
-    type: 'sent',
-    text: 'That sounds absolutely perfect! Yes, exactly what I had in mind. Can you also add some candles and fairy lights to the centerpieces?',
-    time: '9:22 AM · ✓✓',
-  },
-  {
-    id: 'm4',
-    type: 'received',
-    text: 'Of course! Taper candles and micro fairy lights are actually my specialty 🕯️✨ I\'ll include a mood board proposal with everything.',
-    time: '9:28 AM',
-  },
-  {
-    id: 'm5',
-    type: 'received',
-    attachment: { name: 'Vendor_Contract_BloomCo.pdf', size: '245 KB · Tap to sign' },
-    text: 'Just sent over the contract for your review. Please e-sign when ready and I\'ll get started on the design proposal! 🌸',
-    time: '2m ago',
-  },
-]
+function initials(name: string): string {
+  return name
+    .split(' ')
+    .map(w => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+}
 
-const QUICK_REPLIES = ['✓ Sign Contract', '📅 Schedule Call', '❓ Ask Question']
+function formatRelTime(iso: string): string {
+  const d = new Date(iso)
+  const now = new Date()
+  const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000)
+  if (diffDays === 0) return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  if (diffDays === 1) return 'Yesterday'
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
 
-// ── Typing dots animation ──────────────────────────────────────────────────────
-function TypingDots() {
+function groupByDate(msgs: Message[]): { date: string; messages: Message[] }[] {
+  const groups: { date: string; messages: Message[] }[] = []
+  for (const msg of msgs) {
+    const dateStr = new Date(msg.created_at).toLocaleDateString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric',
+    })
+    const last = groups[groups.length - 1]
+    if (last && last.date === dateStr) {
+      last.messages.push(msg)
+    } else {
+      groups.push({ date: dateStr, messages: [msg] })
+    }
+  }
+  return groups
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+
+function Skeleton() {
   return (
-    <div className="flex items-center gap-2 py-1">
-      <div
-        className="w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
-        style={{ background: 'linear-gradient(135deg,#E6F7F2,#A8DCC8)' }}
-      >
-        🌸
+    <div className="min-h-screen bg-[#F8F4FC] animate-pulse">
+      <div className="h-16 bg-[#1A1A2E]" />
+      <div className="flex max-w-6xl mx-auto h-[calc(100vh-64px)]">
+        <div className="w-80 border-r border-[#EDE5F7] bg-white space-y-3 p-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-16 bg-[#F8F4FC] rounded-xl" />
+          ))}
+        </div>
+        <div className="flex-1 bg-[#F8F4FC]" />
       </div>
-      <div
-        className="flex gap-1 items-center bg-white px-3.5 py-2.5"
-        style={{ borderRadius: '4px 16px 16px 16px', boxShadow: '0 2px 8px rgba(74,14,110,0.06)' }}
-      >
-        {[0, 200, 400].map((delay, i) => (
-          <div
-            key={i}
-            className="w-1.5 h-1.5 rounded-full"
-            style={{
-              background: '#DDB8F5',
-              animation: `typingPulse 1.2s ease ${delay}ms infinite`,
-            }}
-          />
-        ))}
-      </div>
-      <style>{`
-        @keyframes typingPulse {
-          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-          30% { transform: translateY(-4px); opacity: 1; }
-        }
-      `}</style>
     </div>
   )
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default function MessagesPage() {
-  const [screen, setScreen] = useState<Screen>('inbox')
-  const [activeFilter, setActiveFilter] = useState<InboxFilter>('all')
-  const [quickReplyClicked, setQuickReplyClicked] = useState<string | null>(null)
-  const [inputValue, setInputValue] = useState('')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const initialBookingId = searchParams.get('bookingId')
+
+  const [userId, setUserId] = useState<string | null>(null)
+  const [isVendor, setIsVendor] = useState(false)
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [activeBookingId, setActiveBookingId] = useState<string | null>(initialBookingId)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [newMessage, setNewMessage] = useState('')
+  const [sending, setSending] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [search, setSearch] = useState('')
+
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // ── Load auth + conversations ──
+  const loadConversations = useCallback(async () => {
+    const supabase = getSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.replace('/auth/signin'); return }
+
+    setUserId(user.id)
+    setAuthLoading(false)
+
+    const { data: vp } = await supabase
+      .from('vendor_profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    const userIsVendor = !!vp
+    setIsVendor(userIsVendor)
+
+    // Fetch bookings for this user
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q = supabase.from('bookings').select('id, vendor_id, event_type, event_date, client_name, client_email, vendor_profiles(id, business_name)') as any
+    if (userIsVendor) {
+      q = q.eq('vendor_id', vp!.id)
+    } else {
+      q = q.eq('client_email', user.email)
+    }
+    const { data: bookings } = await q.order('created_at', { ascending: false })
+
+    // Build conversation summaries
+    const convs: Conversation[] = await Promise.all(
+      ((bookings ?? []) as Record<string, unknown>[]).map(async (b) => {
+        const [{ data: lastMsgs }, { count: unread }] = await Promise.all([
+          supabase
+            .from('messages')
+            .select('sender_id, body, created_at')
+            .eq('booking_id', b.id as string)
+            .order('created_at', { ascending: false })
+            .limit(1),
+          supabase
+            .from('messages')
+            .select('id', { count: 'exact', head: true })
+            .eq('booking_id', b.id as string)
+            .eq('read', false)
+            .neq('sender_id', user.id),
+        ])
+
+        const vendorProfile = b.vendor_profiles as { id: string; business_name: string } | null
+        const otherName = userIsVendor
+          ? (b.client_name as string) ?? 'Client'
+          : vendorProfile?.business_name ?? 'Vendor'
+
+        return {
+          bookingId: b.id as string,
+          otherName,
+          eventType: b.event_type as string | null,
+          eventDate: b.event_date as string | null,
+          lastMessage: lastMsgs?.[0]?.body ?? null,
+          lastMessageAt: lastMsgs?.[0]?.created_at ?? null,
+          unreadCount: unread ?? 0,
+        }
+      })
+    )
+
+    setConversations(convs)
+  }, [router])
+
+  // ── Load messages for active conversation ──
+  const loadMessages = useCallback(async (bookingId: string) => {
+    const supabase = getSupabaseClient()
+    const { data } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('booking_id', bookingId)
+      .order('created_at', { ascending: true })
+
+    setMessages((data ?? []) as Message[])
+
+    // Mark incoming messages as read
+    await supabase
+      .from('messages')
+      .update({ read: true })
+      .eq('booking_id', bookingId)
+      .eq('read', false)
+      .neq('sender_id', userId ?? '')
+  }, [userId])
+
+  useEffect(() => { loadConversations() }, [loadConversations])
+
+  // ── Subscribe to realtime for active thread ──
+  useEffect(() => {
+    if (!activeBookingId) return
+    loadMessages(activeBookingId)
+
+    const supabase = getSupabaseClient()
+    const channel = supabase
+      .channel(`messages:${activeBookingId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `booking_id=eq.${activeBookingId}` },
+        (payload) => {
+          setMessages(prev => [...prev, payload.new as Message])
+          if (userId && payload.new.sender_id !== userId) {
+            supabase.from('messages').update({ read: true }).eq('id', payload.new.id).then(() => {})
+          }
+        },
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [activeBookingId, loadMessages, userId])
+
+  // ── Scroll to bottom on new messages ──
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  // ── Send message ──
+  async function sendMessage() {
+    if (!newMessage.trim() || !activeBookingId || !userId) return
+    setSending(true)
+    const supabase = getSupabaseClient()
+    await supabase.from('messages').insert({
+      booking_id: activeBookingId,
+      sender_id: userId,
+      body: newMessage.trim(),
+    })
+    setNewMessage('')
+    setSending(false)
+  }
+
+  if (authLoading) return <Skeleton />
+
+  const activeConv = conversations.find(c => c.bookingId === activeBookingId)
+  const filteredConvs = search.trim()
+    ? conversations.filter(c => c.otherName.toLowerCase().includes(search.toLowerCase()))
+    : conversations
+  const messageGroups = activeBookingId ? groupByDate(messages) : []
 
   return (
     <div
-      className={`${syne.variable} ${epilogue.variable} min-h-screen bg-[#1A1A2E] flex items-center justify-center gap-8 flex-wrap p-6`}
-      style={{ fontFamily: 'var(--font-epilogue), sans-serif' }}
+      className={`${syne.variable} ${spaceGrotesk.variable} min-h-screen bg-[#F8F4FC] flex flex-col`}
+      style={{ fontFamily: 'var(--font-space-mg), system-ui, sans-serif' }}
     >
-      {/* ══ PHONE 1: INBOX ══ */}
-      <div className="flex flex-col items-center">
-        <div
-          className="mb-3 text-[11px] font-bold uppercase tracking-[2px] text-center"
-          style={{ color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-syne)' }}
-        >
-          Message Inbox
+      {/* ── NAV ── */}
+      <nav className="bg-[#1A1A2E] sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+          <Link
+            href="/"
+            className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity flex-shrink-0"
+            style={{ fontFamily: 'var(--font-syne-mg)' }}
+          >
+            evnti.
+          </Link>
+          <span
+            className="text-sm font-semibold text-white/70 hidden sm:block"
+            style={{ fontFamily: 'var(--font-syne-mg)' }}
+          >
+            Messages
+          </span>
+          <Link
+            href={isVendor ? '/vendor/dashboard' : '/dashboard'}
+            className="px-4 py-2 rounded-full text-xs font-semibold border border-white/20 text-white/70 hover:border-white/50 hover:text-white transition-colors flex-shrink-0"
+            style={{ fontFamily: 'var(--font-space-mg)' }}
+          >
+            ← Dashboard
+          </Link>
         </div>
+      </nav>
+
+      {/* ── TWO-COLUMN LAYOUT ── */}
+      <div className="flex-1 max-w-6xl mx-auto w-full sm:px-6 flex" style={{ minHeight: 'calc(100vh - 64px)' }}>
+
+        {/* ── LEFT: Conversation list ── */}
         <div
-          className="w-[375px] h-[812px] bg-[#F8F4FC] rounded-[48px] overflow-hidden flex flex-col flex-shrink-0"
-          style={{ boxShadow: '0 40px 80px rgba(0,0,0,0.5), 0 0 0 10px #2D2D45, 0 0 0 12px #3D3D55' }}
+          className={`${activeBookingId ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-80 lg:w-96 flex-shrink-0 bg-white border-r border-[#EDE5F7]`}
         >
-          {/* Notch */}
-          <div className="w-[120px] h-8 bg-[#1A1A2E] rounded-b-[20px] mx-auto flex-shrink-0 z-20" />
-
-          {/* ── INBOX HEADER ── */}
-          <div className="bg-[#1A1A2E] px-5 pt-3.5 pb-4 flex-shrink-0 relative overflow-hidden">
-            <div
-              className="absolute w-[200px] h-[200px] rounded-full pointer-events-none"
-              style={{ background: 'radial-gradient(circle, rgba(107,31,154,0.3) 0%, transparent 70%)', top: '-70px', right: '-40px' }}
-            />
-            {/* Top bar */}
-            <div className="flex items-center justify-between mb-3.5 relative z-[1]">
-              <span
-                className="text-[20px] font-extrabold text-white tracking-[-0.4px]"
-                style={{ fontFamily: 'var(--font-syne)' }}
-              >
-                Messages
-              </span>
-              <div className="flex gap-2">
-                {['🔍', '✏️'].map(icon => (
-                  <button
-                    key={icon}
-                    className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center text-base text-white"
-                    style={{ background: 'rgba(255,255,255,0.08)', border: 'none' }}
-                  >
-                    {icon}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Search bar */}
-            <div
-              className="flex items-center gap-2 rounded-xl px-3.5 py-2.5 relative z-[1]"
-              style={{ background: 'rgba(255,255,255,0.08)', border: '1.5px solid rgba(255,255,255,0.1)' }}
+          {/* Header + search */}
+          <div className="px-4 pt-5 pb-3 border-b border-[#EDE5F7]">
+            <h2
+              className="text-lg font-bold text-[#1A1A2E] mb-3"
+              style={{ fontFamily: 'var(--font-syne-mg)' }}
             >
-              <span className="text-sm" style={{ color: 'rgba(255,255,255,0.3)' }}>🔍</span>
+              Conversations
+            </h2>
+            <div
+              className="flex items-center gap-2 rounded-xl px-3 py-2.5 border border-[#DDB8F5] bg-[#F8F4FC]"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <circle cx="6" cy="6" r="4.5" stroke="#7C6B8A" strokeWidth="1.5" />
+                <path d="M9.5 9.5l2.5 2.5" stroke="#7C6B8A" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
               <input
                 type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
                 placeholder="Search conversations…"
-                className="flex-1 bg-transparent border-none outline-none text-[13px] text-white"
-                style={{ fontFamily: 'var(--font-epilogue)' }}
+                className="flex-1 bg-transparent border-none outline-none text-sm text-[#1A1A2E] placeholder-[#7C6B8A]"
+                style={{ fontFamily: 'var(--font-space-mg)' }}
               />
             </div>
-
-            {/* Filter tabs */}
-            <div className="flex gap-2 mt-3 overflow-x-auto scrollbar-hide relative z-[1]">
-              {INBOX_FILTERS.map(f => (
-                <button
-                  key={f.id}
-                  onClick={() => setActiveFilter(f.id)}
-                  className="px-3 py-[5px] rounded-[20px] text-[11px] font-bold whitespace-nowrap flex-shrink-0"
-                  style={{
-                    fontFamily: 'var(--font-syne)',
-                    background: activeFilter === f.id ? '#6B1F9A' : 'rgba(255,255,255,0.06)',
-                    border: `1.5px solid ${activeFilter === f.id ? '#6B1F9A' : 'rgba(255,255,255,0.1)'}`,
-                    color: activeFilter === f.id ? 'white' : 'rgba(255,255,255,0.5)',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
           </div>
 
-          {/* ── CONVERSATION LIST ── */}
-          <div className="flex-1 overflow-y-auto scrollbar-hide bg-[#F8F4FC]">
-
-            {/* AI Assistant section */}
-            <div
-              className="px-5 py-2 text-[10px] font-bold uppercase tracking-[1.5px] text-[#7C6B8A]"
-              style={{ fontFamily: 'var(--font-syne)' }}
-            >
-              AI Assistant
-            </div>
-            <div
-              className="flex items-center gap-3 px-5 py-3.5 border-b border-[#F3E8FF] cursor-pointer"
-              style={{ background: 'linear-gradient(135deg, rgba(74,14,110,0.08), rgba(107,31,154,0.05))', transition: 'all 0.15s' }}
-            >
-              {/* AI avatar */}
-              <div
-                className="w-[46px] h-[46px] rounded-[14px] flex items-center justify-center text-[22px] flex-shrink-0 relative"
-                style={{ background: 'linear-gradient(135deg, #4A0E6E, #6B1F9A)' }}
-              >
-                ✦
-                <div
-                  className="absolute -bottom-[3px] -right-[3px] w-4 h-4 rounded-full flex items-center justify-center text-[9px]"
-                  style={{ background: '#DDB8F5', border: '2px solid #F8F4FC' }}
-                >
-                  🤖
-                </div>
+          {/* List */}
+          <div className="flex-1 overflow-y-auto">
+            {filteredConvs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full py-16 px-6 text-center">
+                <p className="text-sm font-semibold text-[#7C6B8A]" style={{ fontFamily: 'var(--font-space-mg)' }}>
+                  No conversations yet.
+                </p>
+                <p className="text-xs text-[#7C6B8A] mt-1" style={{ fontFamily: 'var(--font-space-mg)' }}>
+                  Conversations start when a booking is made.
+                </p>
               </div>
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="text-[14px] font-bold text-[#1A1A2E] mb-[2px]" style={{ fontFamily: 'var(--font-syne)' }}>
-                  Easy Events AI ✦
-                </div>
-                <div className="text-[12px] text-[#1A1A2E] font-semibold truncate">
-                  ⚠️ Your caterer is still unbooked — 47 days out. I found 3 matches for you.
-                </div>
-              </div>
-              {/* Meta */}
-              <div className="flex flex-col items-end gap-[5px] flex-shrink-0">
-                <span className="text-[10px] font-semibold text-[#7C6B8A]" style={{ fontFamily: 'var(--font-syne)' }}>Now</span>
-                <div className="bg-[#4A0E6E] text-white rounded-[10px] px-[7px] py-[2px] text-[10px] font-bold text-center min-w-[20px]" style={{ fontFamily: 'var(--font-syne)' }}>1</div>
-              </div>
-            </div>
-
-            {/* Vendors section */}
-            <div
-              className="px-5 py-2 text-[10px] font-bold uppercase tracking-[1.5px] text-[#7C6B8A]"
-              style={{ fontFamily: 'var(--font-syne)' }}
-            >
-              Vendors
-            </div>
-
-            {VENDOR_THREADS.map(thread => (
-              <div
-                key={thread.id}
-                onClick={() => setScreen('chat')}
-                className="flex items-center gap-3 px-5 py-3.5 border-b border-[#F3E8FF] cursor-pointer"
-                style={{
-                  background: thread.isUnread ? 'rgba(74,14,110,0.03)' : 'transparent',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {/* Avatar */}
-                <div className="relative flex-shrink-0">
-                  <div
-                    className="w-[46px] h-[46px] rounded-[14px] flex items-center justify-center text-2xl"
-                    style={{ background: thread.avatarBg }}
+            ) : (
+              filteredConvs.map(conv => {
+                const isActive = conv.bookingId === activeBookingId
+                return (
+                  <button
+                    key={conv.bookingId}
+                    type="button"
+                    onClick={() => setActiveBookingId(conv.bookingId)}
+                    className="w-full text-left flex items-center gap-3 px-4 py-3.5 border-b border-[#F3E8FF] transition-colors hover:bg-[#F8F4FC]"
+                    style={{ background: isActive ? '#F3E8FF' : 'transparent' }}
                   >
-                    {thread.avatarEmoji}
-                  </div>
-                  {thread.isOnline && (
+                    {/* Avatar */}
                     <div
-                      className="absolute -bottom-[2px] -right-[2px] w-3 h-3 rounded-full"
-                      style={{ background: '#0D9B6A', border: '2px solid #F8F4FC' }}
-                    />
-                  )}
-                  {thread.isVerified && !thread.isOnline && (
-                    <div
-                      className="absolute -bottom-[2px] -right-[2px] w-[14px] h-[14px] rounded-full flex items-center justify-center text-[8px] text-white"
-                      style={{ background: '#0D9B6A', border: '2px solid #F8F4FC' }}
+                      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-xs font-bold text-white"
+                      style={{ background: avatarColor(conv.otherName), fontFamily: 'var(--font-syne-mg)' }}
                     >
-                      ✓
+                      {initials(conv.otherName)}
                     </div>
-                  )}
-                </div>
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="text-[14px] font-bold text-[#1A1A2E] mb-[2px]" style={{ fontFamily: 'var(--font-syne)' }}>
-                    {thread.name}
-                  </div>
-                  <div
-                    className={`text-[12px] truncate ${thread.isUnread ? 'text-[#1A1A2E] font-semibold' : 'text-[#7C6B8A]'}`}
-                  >
-                    {thread.preview}
-                  </div>
-                </div>
-                {/* Meta */}
-                <div className="flex flex-col items-end gap-[5px] flex-shrink-0">
-                  <span className="text-[10px] font-semibold text-[#7C6B8A]" style={{ fontFamily: 'var(--font-syne)' }}>
-                    {thread.time}
-                  </span>
-                  {thread.unreadCount && (
-                    <div className="bg-[#4A0E6E] text-white rounded-[10px] px-[7px] py-[2px] text-[10px] font-bold text-center min-w-[20px]" style={{ fontFamily: 'var(--font-syne)' }}>
-                      {thread.unreadCount}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* ── BOTTOM NAV ── */}
-          <div className="flex bg-white border-t border-[#F3E8FF] pt-2.5 pb-4 flex-shrink-0">
-            {[
-              { icon: '🏠', label: 'Home', active: false },
-              { icon: '🔍', label: 'Vendors', active: false },
-              { icon: '📋', label: 'My Event', active: false },
-              { icon: '💬', label: 'Messages', active: true },
-              { icon: '👤', label: 'Profile', active: false },
-            ].map(n => (
-              <div key={n.label} className="flex-1 flex flex-col items-center gap-[3px] cursor-pointer py-1.5">
-                <span className="text-[20px]">{n.icon}</span>
-                <span
-                  className="text-[10px] font-bold"
-                  style={{ fontFamily: 'var(--font-syne)', color: n.active ? '#4A0E6E' : '#7C6B8A' }}
-                >
-                  {n.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ══ PHONE 2: CHAT ══ */}
-      <div className="flex flex-col items-center">
-        <div
-          className="mb-3 text-[11px] font-bold uppercase tracking-[2px] text-center"
-          style={{ color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-syne)' }}
-        >
-          Vendor Chat
-        </div>
-        <div
-          className="w-[375px] h-[812px] bg-[#F8F4FC] rounded-[48px] overflow-hidden flex flex-col flex-shrink-0"
-          style={{ boxShadow: '0 40px 80px rgba(0,0,0,0.5), 0 0 0 10px #2D2D45, 0 0 0 12px #3D3D55' }}
-        >
-          {/* Notch */}
-          <div className="w-[120px] h-8 bg-[#1A1A2E] rounded-b-[20px] mx-auto flex-shrink-0 z-20" />
-
-          {/* ── CHAT HEADER ── */}
-          <div className="bg-[#1A1A2E] px-4 pt-3 pb-3.5 flex-shrink-0 flex items-center gap-3 relative overflow-hidden">
-            <div
-              className="absolute w-[150px] h-[150px] rounded-full pointer-events-none"
-              style={{ background: 'radial-gradient(circle, rgba(107,31,154,0.25) 0%, transparent 70%)', top: '-60px', right: '-30px' }}
-            />
-            {/* Back btn */}
-            <button
-              className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center text-base text-white flex-shrink-0 relative z-[1]"
-              style={{ background: 'rgba(255,255,255,0.08)', border: 'none' }}
-            >
-              ←
-            </button>
-            {/* Vendor avatar */}
-            <div className="relative flex-shrink-0 z-[1]">
-              <div
-                className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center text-[20px]"
-                style={{ background: 'linear-gradient(135deg,#E6F7F2,#A8DCC8)' }}
-              >
-                🌸
-              </div>
-              <div
-                className="absolute -bottom-[2px] -right-[2px] w-2.5 h-2.5 rounded-full"
-                style={{ background: '#0D9B6A', border: '2px solid #1A1A2E' }}
-              />
-            </div>
-            {/* Name + status */}
-            <div className="flex-1 relative z-[1]">
-              <div
-                className="text-[15px] font-extrabold text-white tracking-[-0.3px]"
-                style={{ fontFamily: 'var(--font-syne)' }}
-              >
-                Bloom & Co Florals
-              </div>
-              <div className="flex items-center gap-1 text-[11px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                <div className="w-1.5 h-1.5 rounded-full bg-[#0D9B6A]" />
-                Active now · ✅ Pro Verified
-              </div>
-            </div>
-            {/* Action buttons */}
-            <div className="flex gap-2 relative z-[1]">
-              {['📞', '⋯'].map(icon => (
-                <button
-                  key={icon}
-                  className="w-[30px] h-[30px] rounded-[10px] flex items-center justify-center text-sm text-white"
-                  style={{ background: 'rgba(255,255,255,0.08)', border: 'none' }}
-                >
-                  {icon}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* ── BOOKING CONTEXT BANNER ── */}
-          <div
-            className="flex items-center gap-2.5 px-4 py-2.5 border-b border-[#DDB8F5] cursor-pointer flex-shrink-0"
-            style={{ background: '#F3E8FF' }}
-          >
-            <span className="text-base flex-shrink-0">🌸</span>
-            <div className="flex-1">
-              <div className="text-[11px] font-bold text-[#4A0E6E]" style={{ fontFamily: 'var(--font-syne)' }}>
-                Signature Package · Aug 14, 2025
-              </div>
-              <div className="text-[10px] text-[#7C6B8A] mt-[1px]">
-                Deposit paid $570 · Balance $1,650 due Aug 1
-              </div>
-            </div>
-            <span className="text-[12px] text-[#4A0E6E]">›</span>
-          </div>
-
-          {/* ── MESSAGES BODY ── */}
-          <div className="flex-1 overflow-y-auto scrollbar-hide px-4 py-3.5 flex flex-col gap-2.5 bg-[#F8F4FC]">
-            {/* Date divider */}
-            <div className="flex items-center gap-2.5 my-1">
-              <div className="flex-1 h-px bg-[#F3E8FF]" />
-              <span className="text-[10px] font-semibold text-[#7C6B8A] whitespace-nowrap" style={{ fontFamily: 'var(--font-syne)' }}>
-                June 25, 2025
-              </span>
-              <div className="flex-1 h-px bg-[#F3E8FF]" />
-            </div>
-
-            {CHAT_MESSAGES.map(msg => (
-              <div key={msg.id}>
-                {msg.type === 'sent' ? (
-                  <div className="flex flex-row-reverse gap-2 items-end">
-                    <div
-                      className="max-w-[240px] px-3.5 py-[11px]"
-                      style={{
-                        background: '#4A0E6E',
-                        borderRadius: '16px 4px 16px 16px',
-                        animation: 'bubbleIn 0.3s ease both',
-                      }}
-                    >
-                      <div className="text-[13px] leading-[1.5] text-white">{msg.text}</div>
-                      <div
-                        className="text-[10px] mt-1 text-right"
-                        style={{ fontFamily: 'var(--font-syne)', color: 'rgba(255,255,255,0.55)' }}
-                      >
-                        {msg.time}
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <span
+                          className="text-sm font-bold text-[#1A1A2E] truncate"
+                          style={{ fontFamily: 'var(--font-syne-mg)' }}
+                        >
+                          {conv.otherName}
+                        </span>
+                        {conv.lastMessageAt && (
+                          <span className="text-[10px] text-[#7C6B8A] flex-shrink-0" style={{ fontFamily: 'var(--font-space-mg)' }}>
+                            {formatRelTime(conv.lastMessageAt)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <p
+                          className={`text-xs truncate ${conv.unreadCount > 0 ? 'font-semibold text-[#1A1A2E]' : 'text-[#7C6B8A]'}`}
+                          style={{ fontFamily: 'var(--font-space-mg)' }}
+                        >
+                          {conv.lastMessage ?? conv.eventType ?? 'No messages yet'}
+                        </p>
+                        {conv.unreadCount > 0 && (
+                          <span
+                            className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
+                            style={{ background: '#4A0E6E', fontFamily: 'var(--font-syne-mg)' }}
+                          >
+                            {conv.unreadCount}
+                          </span>
+                        )}
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex gap-2 items-end">
-                    <div
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
-                      style={{ background: 'linear-gradient(135deg,#E6F7F2,#A8DCC8)' }}
-                    >
-                      🌸
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      {msg.attachment && (
-                        <div
-                          className="flex items-center gap-2.5 bg-white rounded-xl px-3 py-2.5 max-w-[220px] cursor-pointer"
-                          style={{
-                            boxShadow: '0 2px 8px rgba(74,14,110,0.06)',
-                            border: '1.5px solid #F3E8FF',
-                            animation: 'bubbleIn 0.3s ease both',
-                          }}
-                        >
-                          <div
-                            className="w-9 h-9 rounded-[10px] flex items-center justify-center text-lg flex-shrink-0"
-                            style={{ background: '#F3E8FF' }}
-                          >
-                            📄
-                          </div>
-                          <div>
-                            <div className="text-[12px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-syne)' }}>
-                              {msg.attachment.name}
-                            </div>
-                            <div className="text-[10px] text-[#7C6B8A] mt-[1px]">{msg.attachment.size}</div>
-                          </div>
-                        </div>
-                      )}
-                      {msg.text && (
-                        <div
-                          className="max-w-[240px] px-3.5 py-[11px]"
-                          style={{
-                            background: 'white',
-                            borderRadius: '4px 16px 16px 16px',
-                            boxShadow: '0 2px 8px rgba(74,14,110,0.06)',
-                            animation: 'bubbleIn 0.3s ease both',
-                          }}
-                        >
-                          <div className="text-[13px] leading-[1.5] text-[#1A1A2E]">{msg.text}</div>
-                          <div
-                            className="text-[10px] mt-1 text-[#7C6B8A]"
-                            style={{ fontFamily: 'var(--font-syne)' }}
-                          >
-                            {msg.time}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {/* Quick replies */}
-            <div className="flex gap-2 flex-wrap mt-1 ml-9">
-              {QUICK_REPLIES.map(qr => (
-                <button
-                  key={qr}
-                  onClick={() => setQuickReplyClicked(qr)}
-                  className="px-3 py-1.5 rounded-[20px] text-[11px] font-bold whitespace-nowrap"
-                  style={{
-                    fontFamily: 'var(--font-syne)',
-                    background: quickReplyClicked === qr ? '#4A0E6E' : 'white',
-                    color: quickReplyClicked === qr ? 'white' : '#4A0E6E',
-                    border: `1.5px solid ${quickReplyClicked === qr ? '#4A0E6E' : '#DDB8F5'}`,
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {qr}
-                </button>
-              ))}
-            </div>
-
-            {/* Typing indicator */}
-            <TypingDots />
-          </div>
-
-          {/* ── AI DRAFT SUGGESTION ── */}
-          <div
-            className="px-3.5 pt-2 bg-white border-t border-[#F3E8FF] flex-shrink-0"
-          >
-            <div
-              className="flex items-start gap-2 rounded-xl px-3 py-2.5 cursor-pointer"
-              style={{ background: '#F3E8FF', border: '1.5px solid #DDB8F5', transition: 'all 0.15s' }}
-            >
-              <span className="text-sm flex-shrink-0">✦</span>
-              <div>
-                <div
-                  className="text-[10px] font-bold text-[#7C6B8A] mb-[2px]"
-                  style={{ fontFamily: 'var(--font-syne)' }}
-                >
-                  AI Draft Suggestion
-                </div>
-                <div className="text-[12px] text-[#4A0E6E] leading-[1.5]">
-                  "Thank you! I'll review and sign the contract today. Could we also schedule a 15-min call to discuss the arch design?"
-                </div>
-                <div
-                  className="text-[10px] font-bold text-[#4A0E6E] mt-1"
-                  style={{ fontFamily: 'var(--font-syne)' }}
-                >
-                  Tap to use →
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ── MESSAGE INPUT BAR ── */}
-          <div className="bg-white border-t border-[#F3E8FF] px-3.5 pt-2.5 pb-6 flex-shrink-0">
-            <div className="flex items-end gap-2">
-              {/* Attachment / camera */}
-              <div className="flex gap-1.5">
-                {['📎', '📷'].map(icon => (
-                  <button
-                    key={icon}
-                    className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center text-base flex-shrink-0"
-                    style={{ background: '#F3E8FF', border: 'none', transition: 'all 0.15s' }}
-                  >
-                    {icon}
                   </button>
-                ))}
-              </div>
-              {/* Text input */}
-              <div
-                className="flex-1 flex items-center px-3.5 py-[9px] rounded-[14px]"
-                style={{ background: '#F8F4FC', border: '2px solid #DDB8F5', transition: 'border-color 0.2s' }}
-              >
-                <textarea
-                  rows={1}
-                  value={inputValue}
-                  onChange={e => setInputValue(e.target.value)}
-                  placeholder="Message Bloom & Co…"
-                  className="flex-1 bg-transparent border-none outline-none resize-none text-[13px] text-[#1A1A2E] leading-[1.4]"
-                  style={{ fontFamily: 'var(--font-epilogue)', color: '#1A1A2E' }}
-                />
-              </div>
-              {/* Send */}
-              <button
-                className="w-9 h-9 rounded-[10px] flex items-center justify-center text-base text-white flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg, #4A0E6E, #6B1F9A)', border: 'none', transition: 'all 0.15s' }}
-              >
-                →
-              </button>
-            </div>
+                )
+              })
+            )}
           </div>
         </div>
-      </div>
 
-      <style>{`
-        @keyframes bubbleIn {
-          from { opacity: 0; transform: scale(0.85) translateY(8px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-      `}</style>
+        {/* ── RIGHT: Thread ── */}
+        <div className={`${activeBookingId ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-[#F8F4FC] min-w-0`}>
+          {activeConv ? (
+            <>
+              {/* Thread header */}
+              <div className="bg-white border-b border-[#EDE5F7] px-5 py-4 flex items-center gap-3 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveBookingId(null)}
+                  className="md:hidden w-8 h-8 rounded-lg flex items-center justify-center text-[#4A0E6E] flex-shrink-0"
+                  style={{ background: '#F3E8FF' }}
+                  aria-label="Back"
+                >
+                  ←
+                </button>
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-xs font-bold text-white"
+                  style={{ background: avatarColor(activeConv.otherName), fontFamily: 'var(--font-syne-mg)' }}
+                >
+                  {initials(activeConv.otherName)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-syne-mg)' }}>
+                    {activeConv.otherName}
+                  </p>
+                  {(activeConv.eventType || activeConv.eventDate) && (
+                    <p className="text-xs text-[#7C6B8A]" style={{ fontFamily: 'var(--font-space-mg)' }}>
+                      {activeConv.eventType ?? ''}
+                      {activeConv.eventDate
+                        ? `${activeConv.eventType ? ' · ' : ''}${new Date(activeConv.eventDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+                        : ''}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Messages body */}
+              <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-1">
+                {messageGroups.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-sm text-[#7C6B8A]" style={{ fontFamily: 'var(--font-space-mg)' }}>
+                      No messages yet. Say hello!
+                    </p>
+                  </div>
+                ) : (
+                  messageGroups.map(group => (
+                    <div key={group.date}>
+                      {/* Date divider */}
+                      <div className="flex items-center gap-3 my-5">
+                        <div className="flex-1 h-px bg-[#EDE5F7]" />
+                        <span
+                          className="text-[11px] font-semibold text-[#7C6B8A] whitespace-nowrap"
+                          style={{ fontFamily: 'var(--font-syne-mg)' }}
+                        >
+                          {group.date}
+                        </span>
+                        <div className="flex-1 h-px bg-[#EDE5F7]" />
+                      </div>
+                      <div className="space-y-2">
+                        {group.messages.map(msg => {
+                          const isOwn = msg.sender_id === userId
+                          return (
+                            <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                              <div
+                                className="max-w-[70%] sm:max-w-[60%] px-4 py-2.5"
+                                style={{
+                                  background: isOwn ? '#4A0E6E' : 'white',
+                                  borderRadius: isOwn ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
+                                  boxShadow: isOwn ? 'none' : '0 2px 8px rgba(74,14,110,0.06)',
+                                }}
+                              >
+                                <p
+                                  className="text-sm leading-relaxed"
+                                  style={{ fontFamily: 'var(--font-space-mg)', color: isOwn ? 'white' : '#1A1A2E' }}
+                                >
+                                  {msg.body}
+                                </p>
+                                <p
+                                  className={`text-[10px] mt-1 ${isOwn ? 'text-right' : ''}`}
+                                  style={{
+                                    fontFamily: 'var(--font-syne-mg)',
+                                    color: isOwn ? 'rgba(255,255,255,0.5)' : '#7C6B8A',
+                                  }}
+                                >
+                                  {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                  {isOwn && (msg.read ? ' · ✓✓' : ' · ✓')}
+                                </p>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Input bar */}
+              <div className="bg-white border-t border-[#EDE5F7] px-4 py-3 flex-shrink-0">
+                <div className="flex items-end gap-2">
+                  <div
+                    className="flex-1 flex items-center rounded-xl border-2 border-[#DDB8F5] bg-[#F8F4FC] px-3.5 py-2.5 focus-within:border-[#4A0E6E] transition-colors"
+                  >
+                    <textarea
+                      rows={1}
+                      value={newMessage}
+                      onChange={e => setNewMessage(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          sendMessage()
+                        }
+                      }}
+                      placeholder={`Message ${activeConv.otherName}…`}
+                      className="flex-1 bg-transparent border-none outline-none resize-none text-sm text-[#1A1A2E] leading-relaxed placeholder-[#7C6B8A]"
+                      style={{ fontFamily: 'var(--font-space-mg)', maxHeight: 120 }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={sendMessage}
+                    disabled={!newMessage.trim() || sending}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0 transition-opacity disabled:opacity-40 hover:opacity-90"
+                    style={{ background: 'linear-gradient(135deg, #4A0E6E, #6B1F9A)' }}
+                    aria-label="Send message"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <path d="M14 2L2 7l4.5 1.5L8.5 14 14 2z" fill="white" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* Empty state */
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                style={{ background: '#F3E8FF' }}
+              >
+                <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+                  <path
+                    d="M4 6h20a2 2 0 012 2v12a2 2 0 01-2 2H8l-6 4V8a2 2 0 012-2z"
+                    stroke="#4A0E6E"
+                    strokeWidth="1.5"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
+                </svg>
+              </div>
+              <p
+                className="text-base font-bold text-[#1A1A2E]"
+                style={{ fontFamily: 'var(--font-syne-mg)' }}
+              >
+                Select a conversation
+              </p>
+              <p
+                className="text-sm text-[#7C6B8A] max-w-xs"
+                style={{ fontFamily: 'var(--font-space-mg)' }}
+              >
+                Choose a conversation from the list to start messaging.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

@@ -84,6 +84,8 @@ const FAQS = [
   { q: 'Is my payment secure?', a: 'Yes. All payments are processed through Stripe — the same infrastructure used by Amazon and Shopify. We never store your card details.' },
   { q: 'What types of events can I plan?', a: "Any event — birthdays, weddings, corporate gatherings, baby showers, graduation parties, and more. If there's a celebration, Evnti can plan it." },
   { q: 'When does Evnti launch?', a: "We're in early access right now. Join the waitlist and you'll be among the first to get in — with priority onboarding support included." },
+  { q: 'Does Eve have a usage limit?', a: 'Each account gets 10 free Eve credits to start. Each conversation uses 1 credit. We offer additional credits as part of our premium plan — coming soon. This helps us keep Eve fast, accurate, and available for everyone.' },
+  { q: 'How does evnti make money?', a: 'Evnti charges a small platform fee on each booking made through the app. This means you only pay when you book a vendor — no subscriptions, no hidden fees. Vendors keep the majority of what they earn.' },
 ]
 
 // ── Types ────────────────────────────────────────────────────────────────────
