@@ -50,19 +50,25 @@ function monthsUntil(iso: string): number {
 
 // ── Vendor checklist config ───────────────────────────────────────────────────
 
-const BASE_VENDORS = ['Venue', 'Photography', 'Catering', 'Music/DJ']
+const ALL_VENDOR_CATEGORIES = [
+  'Venue',
+  'Decor',
+  'Food & Catering',
+  'Cake',
+  'Drinks & Bar Service',
+  'Entertainment',
+  'MC',
+  'Photography',
+  'Videography',
+  'Servers',
+  'Beauty & Hair',
+  'Makeup',
+  'DJ',
+  'Tech & Lighting',
+]
 
-const EXTRA_VENDORS: Record<string, string[]> = {
-  Wedding:       ['Florals', 'Cake', 'Beauty & Hair', 'Videography'],
-  Birthday:      ['Cake', 'Entertainment'],
-  'Baby Shower': ['Cake', 'Florals', 'Decor'],
-  Corporate:     ['AV Equipment', 'Transportation'],
-  'Kids Party':  ['Entertainment', 'Cake'],
-}
-
-function getVendorList(eventType: string | null): string[] {
-  const extras = eventType ? (EXTRA_VENDORS[eventType] ?? []) : []
-  return [...BASE_VENDORS, ...extras]
+function getVendorList(_eventType: string | null): string[] {
+  return ALL_VENDOR_CATEGORIES
 }
 
 // ── Task list config ──────────────────────────────────────────────────────────
