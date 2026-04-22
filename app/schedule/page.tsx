@@ -1,714 +1,792 @@
 'use client'
-import { useState } from 'react'
-import { Syne, Epilogue } from 'next/font/google'
 
-const syne = Syne({ subsets: ['latin'], weight: ['400', '600', '700', '800'], variable: '--font-syne' })
-const epilogue = Epilogue({ subsets: ['latin'], weight: ['300', '400', '500', '600'], variable: '--font-epilogue' })
+import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Syne, Space_Grotesk } from 'next/font/google'
+import { getSupabaseClient } from '@/lib/supabase'
 
-type Tab = 'schedule' | 'todo' | 'reminders'
+const syne = Syne({
+  subsets: ['latin'],
+  weight: ['400', '600', '700', '800'],
+  variable: '--font-syne-sc',
+})
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-space-sc',
+})
 
-// ── Data types ────────────────────────────────────────────────────────────────
-interface DateChip { day: string; num: number; hasEvent: boolean }
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-interface EventTag { label: string; bg: string; color: string }
-interface ScheduleEvent {
-  title: string
-  detail: string
-  tags: EventTag[]
-  borderColor: string
-}
-interface TimeRow { time: string; event?: ScheduleEvent }
-
-interface Appointment {
-  day: string; month: string
-  title: string; detail: string; vendor: string; time: string
-}
-
-interface TodoItem {
-  id: string; title: string
-  meta1: string; meta2: string
-  priorityColor: string; assign: string
-}
-interface TodoGroup {
-  id: string; name: string; dotColor: string; count: string
-  items: TodoItem[]
-  preChecked?: boolean
+interface EventData {
+  id: string
+  event_type: string | null
+  event_date: string | null
+  location: string | null
+  guest_count: number | null
 }
 
-interface Reminder {
-  id: string; icon: string; iconBg: string
-  title: string; detail: string
-  time: string; urgent?: boolean
-  borderColor: string
+interface BookingVendor {
+  id: string
+  business_name: string
+  category: string
+  phone: string | null
 }
 
-// ── Static data ───────────────────────────────────────────────────────────────
-const DATE_CHIPS: DateChip[] = [
-  { day: 'Mon', num: 23, hasEvent: false },
-  { day: 'Tue', num: 24, hasEvent: true },
-  { day: 'Wed', num: 25, hasEvent: true },
-  { day: 'Thu', num: 26, hasEvent: true },
-  { day: 'Fri', num: 27, hasEvent: false },
-  { day: 'Sat', num: 28, hasEvent: true },
-  { day: 'Sun', num: 29, hasEvent: false },
+interface ScheduleSlot {
+  id: string
+  time: string
+  activity: string
+  vendorId: string
+}
+
+interface TodoTask {
+  id: string
+  text: string
+  group: 'week_before' | 'day_before' | 'day_of'
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const BASE_SLOTS: Omit<ScheduleSlot, 'id'>[] = [
+  { time: '08:00 AM', activity: 'Vendor setup begins',       vendorId: '' },
+  { time: '10:00 AM', activity: 'Final venue walkthrough',   vendorId: '' },
+  { time: '12:00 PM', activity: 'Client / host arrives',     vendorId: '' },
+  { time: '02:00 PM', activity: 'Event begins',              vendorId: '' },
+  { time: '06:00 PM', activity: 'Event ends',                vendorId: '' },
+  { time: '07:00 PM', activity: 'Vendor pack down',          vendorId: '' },
 ]
 
-const TIME_ROWS: TimeRow[] = [
-  {
-    time: '9 AM',
-    event: {
-      title: 'Call Saffron & Co — Catering Consultation',
-      detail: 'Discuss menu, confirm halal options, get quote',
-      tags: [
-        { label: '🍽️ Vendor Call', bg: '#E6F7F2', color: '#0D9B6A' },
-        { label: '1 hour', bg: '#F3E8FF', color: '#4A0E6E' },
-      ],
-      borderColor: '#0D9B6A',
-    },
-  },
-  { time: '10 AM' },
-  {
-    time: '11 AM',
-    event: {
-      title: '⚠️ Confirm DJ Smooth — Overdue',
-      detail: 'Send playlist preferences & confirm Aug 14 date',
-      tags: [
-        { label: 'Urgent', bg: '#FDEDEC', color: '#C0392B' },
-        { label: '🎵 Music', bg: '#F3E8FF', color: '#4A0E6E' },
-      ],
-      borderColor: '#C0392B',
-    },
-  },
-  { time: '12 PM' },
-  {
-    time: '2 PM',
-    event: {
-      title: 'Review florist contract — Bloom & Co',
-      detail: 'E-sign final agreement, confirm setup time',
-      tags: [
-        { label: '📄 Contract', bg: '#FEF9E7', color: '#D4AC0D' },
-        { label: '30 min', bg: '#F3E8FF', color: '#4A0E6E' },
-      ],
-      borderColor: '#D4AC0D',
-    },
-  },
-  { time: '4 PM' },
+const WEDDING_EXTRA_SLOTS: Omit<ScheduleSlot, 'id'>[] = [
+  { time: '09:00 AM', activity: 'Hair & makeup begins',                     vendorId: '' },
+  { time: '11:00 AM', activity: 'Photography — getting ready shots',        vendorId: '' },
+  { time: '01:00 PM', activity: 'Ceremony begins',                          vendorId: '' },
+  { time: '03:00 PM', activity: 'Cocktail hour',                            vendorId: '' },
+  { time: '04:00 PM', activity: 'Reception begins',                         vendorId: '' },
+  { time: '09:00 PM', activity: 'Last dance',                               vendorId: '' },
 ]
 
-const APPOINTMENTS: Appointment[] = [
-  { day: '5', month: 'Jul', title: 'Hair & Makeup Trial', detail: 'Bridal suite · Full glam trial run', vendor: '💄 Glam Squad HTX', time: '10:00 AM' },
-  { day: '12', month: 'Jul', title: 'Catering Tasting', detail: 'Menu tasting — 4 courses + bar options', vendor: '🍽️ Saffron & Co', time: '12:00 PM' },
-  { day: '7', month: 'Aug', title: 'Venue Final Walkthrough', detail: 'Layout, seating plan, vendor access review', vendor: '🏛️ The Astorian', time: '2:00 PM' },
+const TODO_TASKS: TodoTask[] = [
+  { id: 'wb1', text: 'Confirm all vendor arrival times',    group: 'week_before' },
+  { id: 'wb2', text: 'Share schedule with all vendors',     group: 'week_before' },
+  { id: 'wb3', text: 'Prepare vendor payment envelopes',    group: 'week_before' },
+  { id: 'wb4', text: 'Create seating plan',                 group: 'week_before' },
+  { id: 'wb5', text: 'Prepare emergency kit',               group: 'week_before' },
+  { id: 'db1', text: 'Charge all devices',                  group: 'day_before' },
+  { id: 'db2', text: 'Confirm headcount with caterer',      group: 'day_before' },
+  { id: 'db3', text: 'Lay out outfit and accessories',      group: 'day_before' },
+  { id: 'db4', text: 'Brief MC / host on running order',    group: 'day_before' },
+  { id: 'do1', text: 'Eat breakfast before getting ready',  group: 'day_of' },
+  { id: 'do2', text: 'Have vendor contact list ready',      group: 'day_of' },
+  { id: 'do3', text: 'Designate a point person for vendors',group: 'day_of' },
+  { id: 'do4', text: 'Take a moment to enjoy it',           group: 'day_of' },
 ]
 
-const TODO_GROUPS: TodoGroup[] = [
-  {
-    id: 'urgent',
-    name: 'Urgent',
-    dotColor: '#C0392B',
-    count: '3 tasks',
-    items: [
-      { id: 'u1', title: 'Book caterer — headcount needed ASAP', meta1: '📅 Overdue', meta2: '🍽️ Vendors', priorityColor: '#C0392B', assign: 'Aisha' },
-      { id: 'u2', title: 'Confirm DJ Smooth — send playlist preferences', meta1: '📅 Was Jun 28', meta2: '🎵 Music', priorityColor: '#C0392B', assign: 'Aisha' },
-      { id: 'u3', title: 'Finalize guest list — RSVP deadline Jun 30', meta1: '📅 Jun 30', meta2: '👥 200 guests', priorityColor: '#C0392B', assign: 'Both' },
-    ],
-  },
-  {
-    id: 'week',
-    name: 'This Week',
-    dotColor: '#E67E22',
-    count: '5 tasks',
-    items: [
-      { id: 'w1', title: 'Review & e-sign florist contract', meta1: '📅 Jun 27', meta2: '📄 Contract', priorityColor: '#E67E22', assign: 'Aisha' },
-      { id: 'w2', title: 'Book bar service vendor', meta1: '📅 Jun 28', meta2: '🍹 Bar', priorityColor: '#E67E22', assign: 'Marcus' },
-    ],
-  },
-  {
-    id: 'done',
-    name: 'Completed',
-    dotColor: '#0D9B6A',
-    count: '18 tasks',
-    preChecked: true,
-    items: [
-      { id: 'd1', title: 'Book venue — The Astorian', meta1: '✓ Jun 23', meta2: '💰 $5,500', priorityColor: '#0D9B6A', assign: 'Aisha' },
-      { id: 'd2', title: 'Book florist — Bloom & Co Florals', meta1: '✓ Jun 25', meta2: '🌸 Florals', priorityColor: '#0D9B6A', assign: 'Aisha' },
-    ],
-  },
+const EMERGENCY_ITEMS = [
+  'Safety pin kit',
+  'Stain remover pen',
+  'Pain relievers',
+  'Phone charger',
+  'Cash for tips',
+  'Snacks',
 ]
 
-const REMINDERS: Reminder[] = [
-  { id: 'r1', icon: '⚠️', iconBg: '#FDEDEC', title: 'Caterer not booked — 47 days out', detail: 'Most couples book 60 days before. Act now.', time: 'Now', urgent: true, borderColor: '#4A0E6E' },
-  { id: 'r2', icon: '💰', iconBg: '#FEF9E7', title: 'Venue balance due — $2,750', detail: 'Payment due July 10 — 15 days away', time: 'Jul 5', borderColor: '#D4AC0D' },
-  { id: 'r3', icon: '📸', iconBg: '#E6F7F2', title: 'Send shot list to photographer', detail: 'Lens & Light Studio recommends 3 weeks before', time: 'Jul 24', borderColor: '#0D9B6A' },
-  { id: 'r4', icon: '💌', iconBg: '#FEF3E2', title: 'Send formal invitations', detail: 'Recommended 6 weeks before the event', time: 'Jul 3', borderColor: '#E67E22' },
-  { id: 'r5', icon: '🌦️', iconBg: '#F3E8FF', title: 'Weather check — outdoor ceremony', detail: 'Check forecast 7 days before · Have backup plan', time: 'Aug 7', borderColor: '#4A0E6E' },
-  { id: 'r6', icon: '✅', iconBg: '#E6F7F2', title: 'Confirm all vendors — final details', detail: 'Call all 6 vendors to reconfirm arrival times', time: 'Aug 10', borderColor: '#0D9B6A' },
-  { id: 'r7', icon: '💍', iconBg: '#F3E8FF', title: 'Wedding Day morning checklist', detail: 'Auto-sent at 7AM on your wedding day', time: 'Aug 14', borderColor: '#4A0E6E' },
-]
+const TODO_GROUP_META: Record<TodoTask['group'], { label: string; color: string; badge: string; badgeText: string }> = {
+  week_before: { label: 'Week before',  color: '#0D9B6A', badge: '#E6F7F2', badgeText: '#0D9B6A' },
+  day_before:  { label: 'Day before',   color: '#E67E22', badge: '#FEF3E2', badgeText: '#E67E22' },
+  day_of:      { label: 'Day of',       color: '#4A0E6E', badge: '#F3E8FF', badgeText: '#4A0E6E' },
+}
 
-// Pre-checked todo IDs (completed group)
-const INITIAL_DONE = new Set(['d1', 'd2'])
-// All reminders on by default
-const INITIAL_TOGGLES = Object.fromEntries(REMINDERS.map(r => [r.id, true]))
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-// ── Toggle switch component ───────────────────────────────────────────────────
-function ToggleSwitch({ on, onClick }: { on: boolean; onClick: () => void }) {
+function parseTimeMinutes(t: string): number {
+  const m = t.match(/(\d+):(\d+)\s*(AM|PM)/i)
+  if (!m) return 0
+  let h = parseInt(m[1])
+  const min = parseInt(m[2])
+  const period = m[3].toUpperCase()
+  if (period === 'PM' && h !== 12) h += 12
+  if (period === 'AM' && h === 12) h = 0
+  return h * 60 + min
+}
+
+function getDefaultSlots(eventType: string | null): ScheduleSlot[] {
+  const extras = eventType === 'Wedding' ? WEDDING_EXTRA_SLOTS : []
+  const combined = [...BASE_SLOTS, ...extras]
+  const seen = new Set<string>()
+  const unique = combined.filter(s => {
+    if (seen.has(s.time)) return false
+    seen.add(s.time)
+    return true
+  })
+  unique.sort((a, b) => parseTimeMinutes(a.time) - parseTimeMinutes(b.time))
+  return unique.map((s, i) => ({ ...s, id: `default_${i}` }))
+}
+
+function daysUntil(dateStr: string): number {
+  const event = new Date(dateStr)
+  const today = new Date()
+  event.setHours(0, 0, 0, 0)
+  today.setHours(0, 0, 0, 0)
+  return Math.round((event.getTime() - today.getTime()) / 86400000)
+}
+
+function formatEventDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+
+function ScheduleSkeleton() {
   return (
-    <div
-      className="relative w-9 h-5 rounded-[10px] cursor-pointer flex-shrink-0 overflow-hidden"
-      style={{ background: on ? '#4A0E6E' : '#DDB8F5', transition: 'background 0.2s' }}
-      onClick={onClick}
-    >
-      <div
-        className="absolute top-0.5 w-4 h-4 rounded-full bg-white"
-        style={{ left: '2px', transform: on ? 'translateX(16px)' : 'translateX(0)', transition: 'transform 0.2s' }}
-      />
+    <div className="min-h-screen bg-[#F8F4FC] animate-pulse">
+      <div className="h-16 bg-white border-b border-[#EDE5F7]" />
+      <div className="h-[260px] bg-[#1A1A2E]" />
+      <div className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-20 bg-white rounded-2xl" />
+          ))}
+        </div>
+        <div className="space-y-4">
+          <div className="h-64 bg-white rounded-2xl" />
+          <div className="h-48 bg-white rounded-2xl" />
+        </div>
+      </div>
     </div>
   )
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
-export default function SchedulePage() {
-  const [activeTab, setActiveTab] = useState<Tab>('schedule')
-  const [selectedDate, setSelectedDate] = useState(2) // Wed 25 active by default
-  const [doneTodos, setDoneTodos] = useState<Set<string>>(INITIAL_DONE)
-  const [reminderToggles, setReminderToggles] = useState<Record<string, boolean>>(INITIAL_TOGGLES)
+// ── Drag handle icon ──────────────────────────────────────────────────────────
 
-  function toggleTodo(id: string) {
-    setDoneTodos(prev => {
+function DragHandle() {
+  return (
+    <svg width="10" height="14" viewBox="0 0 10 14" fill="none" aria-hidden="true" className="flex-shrink-0 cursor-grab">
+      <circle cx="3" cy="2.5"  r="1.2" fill="#C0ACD4" />
+      <circle cx="7" cy="2.5"  r="1.2" fill="#C0ACD4" />
+      <circle cx="3" cy="7"    r="1.2" fill="#C0ACD4" />
+      <circle cx="7" cy="7"    r="1.2" fill="#C0ACD4" />
+      <circle cx="3" cy="11.5" r="1.2" fill="#C0ACD4" />
+      <circle cx="7" cy="11.5" r="1.2" fill="#C0ACD4" />
+    </svg>
+  )
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+export default function SchedulePage() {
+  const router       = useRouter()
+  const searchParams = useSearchParams()
+  const eventId      = searchParams.get('eventId')
+
+  const [loading,      setLoading]      = useState(true)
+  const [event,        setEvent]        = useState<EventData | null>(null)
+  const [vendors,      setVendors]      = useState<BookingVendor[]>([])
+  const [slots,        setSlots]        = useState<ScheduleSlot[]>([])
+  const [doneTaskIds,  setDoneTaskIds]  = useState<Set<string>>(new Set())
+
+  // ── Fetch ──
+  const loadData = useCallback(async () => {
+    const supabase = getSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.replace('/auth/signin'); return }
+
+    // Event
+    let q = supabase.from('events').select('id, event_type, event_date, location, guest_count').eq('client_id', user.id)
+    if (eventId) {
+      q = q.eq('id', eventId)
+    } else {
+      q = q.order('created_at', { ascending: false }).limit(1)
+    }
+    const { data: evData } = await q
+    const ev = evData?.[0] ?? null
+    setEvent(ev)
+
+    // Confirmed bookings with vendor details
+    if (user.email) {
+      const { data: bookingRows } = await supabase
+        .from('bookings')
+        .select('id, vendor_profiles(id, business_name, category, phone)')
+        .eq('client_email', user.email)
+        .eq('status', 'confirmed')
+
+      const vl: BookingVendor[] = (bookingRows ?? [])
+        .map((b: { id: string; vendor_profiles: unknown }) => {
+          const vp = b.vendor_profiles as { id: string; business_name: string; category: string; phone: string | null } | null
+          return vp ? { id: vp.id, business_name: vp.business_name, category: vp.category, phone: vp.phone } : null
+        })
+        .filter(Boolean) as BookingVendor[]
+      setVendors(vl)
+    }
+
+    // Load from localStorage
+    if (ev) {
+      const savedSlots = localStorage.getItem(`schedule_slots_${ev.id}`)
+      if (savedSlots) {
+        try { setSlots(JSON.parse(savedSlots)) } catch { setSlots(getDefaultSlots(ev.event_type)) }
+      } else {
+        setSlots(getDefaultSlots(ev.event_type))
+      }
+      const savedTodos = localStorage.getItem(`schedule_todos_${ev.id}`)
+      if (savedTodos) {
+        try { setDoneTaskIds(new Set(JSON.parse(savedTodos))) } catch { /* ignore */ }
+      }
+    }
+
+    setLoading(false)
+  }, [router, eventId])
+
+  useEffect(() => { loadData() }, [loadData])
+
+  // ── Persist ──
+  useEffect(() => {
+    if (!event) return
+    localStorage.setItem(`schedule_slots_${event.id}`, JSON.stringify(slots))
+  }, [slots, event])
+
+  useEffect(() => {
+    if (!event) return
+    localStorage.setItem(`schedule_todos_${event.id}`, JSON.stringify([...doneTaskIds]))
+  }, [doneTaskIds, event])
+
+  // ── Handlers ──
+  function addSlot() {
+    const newSlot: ScheduleSlot = {
+      id: `slot_${Date.now()}`,
+      time: '',
+      activity: '',
+      vendorId: '',
+    }
+    setSlots(prev => [...prev, newSlot])
+  }
+
+  function deleteSlot(id: string) {
+    setSlots(prev => prev.filter(s => s.id !== id))
+  }
+
+  function updateSlot(id: string, field: keyof ScheduleSlot, value: string) {
+    setSlots(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s))
+  }
+
+  function toggleTask(id: string) {
+    setDoneTaskIds(prev => {
       const next = new Set(prev)
       next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
   }
 
-  function toggleReminder(id: string) {
-    setReminderToggles(prev => ({ ...prev, [id]: !prev[id] }))
-  }
+  if (loading) return <ScheduleSkeleton />
+
+  // ── Derived ──
+  const days      = event?.event_date ? daysUntil(event.event_date) : null
+  const dateLabel = event?.event_date ? formatEventDate(event.event_date) : null
+  const eventName = event?.event_type
+    ? `${event.event_type}${event.location ? ` · ${event.location}` : ''}`
+    : 'Your Event'
+
+  const countdownLabel =
+    days === null   ? null
+    : days > 1      ? `${days} days to go`
+    : days === 1    ? 'Tomorrow'
+    : days === 0    ? 'Today'
+    : `${Math.abs(days)} days ago`
+
+  const countdownColor =
+    days === null   ? '#DDB8F5'
+    : days <= 0     ? '#0D9B6A'
+    : days <= 7     ? '#E67E22'
+    : '#DDB8F5'
+
+  const todoGroups = (['week_before', 'day_before', 'day_of'] as TodoTask['group'][]).map(g => ({
+    group: g,
+    meta: TODO_GROUP_META[g],
+    tasks: TODO_TASKS.filter(t => t.group === g),
+  }))
+
+  const doneCount  = TODO_TASKS.filter(t => doneTaskIds.has(t.id)).length
 
   return (
     <div
-      className={`${syne.variable} ${epilogue.variable} min-h-screen bg-[#1A1A2E] flex items-center justify-center p-6`}
-      style={{ fontFamily: 'var(--font-epilogue), sans-serif' }}
+      className={`${syne.variable} ${spaceGrotesk.variable} min-h-screen bg-[#F8F4FC]`}
+      style={{ fontFamily: 'var(--font-space-sc), system-ui, sans-serif' }}
     >
-      {/* Phone frame */}
-      <div
-        className="w-[375px] h-[812px] bg-[#F8F4FC] rounded-[48px] overflow-hidden flex flex-col"
-        style={{ boxShadow: '0 40px 80px rgba(0,0,0,0.5), 0 0 0 10px #2D2D45, 0 0 0 12px #3D3D55' }}
+      {/* ── NAV ── */}
+      <nav
+        className="sticky top-0 z-30 bg-[#F8F4FC]/95 border-b border-[#EDE5F7]"
+        style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
       >
-        {/* Notch */}
-        <div className="w-[120px] h-8 bg-[#1A1A2E] rounded-b-[20px] mx-auto flex-shrink-0 z-20" />
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+          <Link
+            href="/"
+            className="text-xl font-extrabold tracking-tight text-[#4A0E6E] hover:opacity-80 transition-opacity flex-shrink-0"
+            style={{ fontFamily: 'var(--font-syne-sc)' }}
+          >
+            evnti.
+          </Link>
 
-        {/* ── HEADER ── */}
-        <div className="bg-[#1A1A2E] px-5 pt-3.5 pb-4 flex-shrink-0 relative overflow-hidden">
-          {/* Radial orb */}
-          <div
-            className="absolute w-[200px] h-[200px] rounded-full pointer-events-none"
-            style={{
-              background: 'radial-gradient(circle, rgba(107,31,154,0.3) 0%, transparent 70%)',
-              top: '-70px', right: '-40px',
-            }}
-          />
+          {/* Center: event name */}
+          <span
+            className="text-sm font-semibold text-[#1A1A2E] truncate hidden sm:block"
+            style={{ fontFamily: 'var(--font-syne-sc)' }}
+          >
+            {eventName}
+          </span>
 
-          {/* Top bar */}
-          <div className="flex items-center justify-between mb-4 relative z-[1]">
-            <span
-              className="text-[20px] font-extrabold text-white tracking-[-0.4px]"
-              style={{ fontFamily: 'var(--font-syne)' }}
-            >
-              Schedule & Tasks
-            </span>
-            <div className="flex gap-2">
-              <button
-                className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center text-base text-white"
-                style={{ background: 'rgba(255,255,255,0.08)' }}
-              >
-                🔔
-              </button>
-              <button
-                className="w-[34px] h-[34px] rounded-[10px] bg-[#6B1F9A] flex items-center justify-center text-white text-[20px] font-light"
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {/* Date strip */}
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-0.5 relative z-[1]">
-            {DATE_CHIPS.map((chip, i) => {
-              const isActive = selectedDate === i
-              return (
-                <div
-                  key={i}
-                  onClick={() => setSelectedDate(i)}
-                  className="flex flex-col items-center px-2.5 py-2 rounded-xl cursor-pointer flex-shrink-0 min-w-[46px]"
-                  style={{
-                    background: isActive ? '#6B1F9A' : 'rgba(255,255,255,0.06)',
-                    border: `1.5px solid ${isActive ? '#6B1F9A' : 'transparent'}`,
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-[0.5px]"
-                    style={{
-                      fontFamily: 'var(--font-syne)',
-                      color: isActive ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.4)',
-                    }}
-                  >
-                    {chip.day}
-                  </span>
-                  <span
-                    className="text-[17px] font-extrabold leading-[1.2]"
-                    style={{
-                      fontFamily: 'var(--font-syne)',
-                      color: isActive ? 'white' : 'rgba(255,255,255,0.7)',
-                    }}
-                  >
-                    {chip.num}
-                  </span>
-                  {/* Event dot (replaces ::after pseudo-element) */}
-                  {chip.hasEvent && (
-                    <div
-                      className="w-1 h-1 rounded-full mt-[3px]"
-                      style={{ background: isActive ? 'white' : '#DDB8F5' }}
-                    />
-                  )}
-                </div>
-              )
-            })}
-          </div>
+          <Link
+            href="/dashboard"
+            className="text-sm font-semibold text-[#4A0E6E] hover:opacity-80 transition-opacity flex-shrink-0"
+            style={{ fontFamily: 'var(--font-space-sc)' }}
+          >
+            My Dashboard
+          </Link>
         </div>
+      </nav>
 
-        {/* ── TABS ── */}
-        <div className="flex bg-white border-b border-[#F3E8FF] flex-shrink-0">
-          {([
-            { id: 'schedule', label: '📅 Schedule' },
-            { id: 'todo', label: '✅ To-Do' },
-            { id: 'reminders', label: '🔔 Reminders' },
-          ] as { id: Tab; label: string }[]).map(t => (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              className="flex-1 py-[11px] px-1.5 text-[11px] font-bold text-center"
-              style={{
-                fontFamily: 'var(--font-syne)',
-                color: activeTab === t.id ? '#4A0E6E' : '#7C6B8A',
-                borderBottom: activeTab === t.id ? '2px solid #4A0E6E' : '2px solid transparent',
-                transition: 'all 0.2s',
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {/* ── TAB BODIES ── */}
+      {/* ── HERO ── */}
+      <div className="relative h-[260px] overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/images/feature.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
         <div
-          key={activeTab}
-          className="flex-1 overflow-y-auto scrollbar-hide"
-          style={{ animation: 'fadeUp 0.3s ease both' }}
-        >
-          {/* ══ SCHEDULE TAB ══ */}
-          {activeTab === 'schedule' && (
-            <div className="px-5 py-4">
-              {/* Today banner */}
+          className="absolute inset-0"
+          style={{ background: 'linear-gradient(to top, rgba(74,14,110,0.95) 0%, rgba(74,14,110,0.65) 60%, rgba(26,26,46,0.4) 100%)' }}
+        />
+
+        <div className="relative z-10 h-full flex flex-col justify-end max-w-6xl mx-auto px-6 pb-8">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p
+                className="text-xs font-bold uppercase tracking-widest mb-2"
+                style={{ color: '#DDB8F5', fontFamily: 'var(--font-space-sc)', letterSpacing: '0.12em' }}
+              >
+                Day-of Schedule
+              </p>
+              <h1
+                className="text-3xl lg:text-4xl font-bold text-white leading-tight mb-2"
+                style={{ fontFamily: 'var(--font-syne-sc)' }}
+              >
+                {event?.event_type ?? 'Your Event'}
+              </h1>
+              {(dateLabel || event?.location) && (
+                <div className="flex flex-wrap items-center gap-3 text-sm text-white/60" style={{ fontFamily: 'var(--font-space-sc)' }}>
+                  {dateLabel && <span>{dateLabel}</span>}
+                  {dateLabel && event?.location && <span>·</span>}
+                  {event?.location && <span>{event.location}</span>}
+                </div>
+              )}
+            </div>
+
+            {/* Countdown chip */}
+            {countdownLabel && (
               <div
-                className="rounded-[14px] px-4 py-3.5 flex items-center gap-3 mb-3.5"
+                className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold"
                 style={{
-                  background: 'linear-gradient(135deg, #4A0E6E, #6B1F9A)',
-                  animation: 'fadeUp 0.4s ease both',
+                  background: 'rgba(255,255,255,0.12)',
+                  border: `1.5px solid ${countdownColor}`,
+                  color: countdownColor,
+                  fontFamily: 'var(--font-syne-sc)',
+                  backdropFilter: 'blur(8px)',
                 }}
               >
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-[20px] flex-shrink-0"
-                  style={{ background: 'rgba(255,255,255,0.15)' }}
-                >
-                  📅
-                </div>
-                <div>
-                  <div
-                    className="text-[10px] font-bold uppercase tracking-[1px] mb-0.5"
-                    style={{ fontFamily: 'var(--font-syne)', color: 'rgba(255,255,255,0.5)' }}
-                  >
-                    Today · Wednesday Jun 25
-                  </div>
-                  <div
-                    className="text-[14px] font-extrabold text-white"
-                    style={{ fontFamily: 'var(--font-syne)' }}
-                  >
-                    3 tasks · 1 appointment
-                  </div>
-                  <div className="text-[11px] mt-[1px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                    47 days until your wedding
-                  </div>
-                </div>
+                {countdownLabel}
               </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-              {/* Time blocks */}
-              <div className="flex flex-col gap-0">
-                {TIME_ROWS.map((row, i) => (
-                  <div key={i} className="flex gap-3 items-start mb-1.5">
-                    {/* Time label */}
-                    <div
-                      className="w-[52px] flex-shrink-0 pt-3 text-right text-[11px] font-bold text-[#7C6B8A]"
-                      style={{ fontFamily: 'var(--font-syne)' }}
+      {/* ── EMPTY STATE ── */}
+      {!event && (
+        <div className="max-w-6xl mx-auto px-6 py-20 text-center">
+          <p className="text-lg font-bold text-[#1A1A2E] mb-2" style={{ fontFamily: 'var(--font-syne-sc)' }}>
+            No event found.
+          </p>
+          <p className="text-sm text-[#7C6B8A] mb-8" style={{ fontFamily: 'var(--font-space-sc)' }}>
+            Create an event first to build your day-of schedule.
+          </p>
+          <Link
+            href="/onboarding"
+            className="px-6 py-3 rounded-full text-sm font-bold text-white"
+            style={{ background: '#4A0E6E', fontFamily: 'var(--font-syne-sc)' }}
+          >
+            Plan an event
+          </Link>
+        </div>
+      )}
+
+      {/* ── MAIN CONTENT ── */}
+      {event && (
+        <div className="max-w-6xl mx-auto px-6 py-10">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+
+            {/* ── LEFT COLUMN ── */}
+            <div className="lg:col-span-2 space-y-10">
+
+              {/* ── SCHEDULE BUILDER ── */}
+              <section>
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <h2
+                      className="text-lg font-bold text-[#1A1A2E]"
+                      style={{ fontFamily: 'var(--font-syne-sc)' }}
                     >
-                      {row.time}
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1">
-                      {row.event ? (
-                        <div
-                          className="bg-white rounded-xl px-3.5 py-3 mb-0.5 cursor-pointer"
-                          style={{
-                            borderLeft: `4px solid ${row.event.borderColor}`,
-                            boxShadow: '0 2px 8px rgba(74,14,110,0.06)',
-                            transition: 'all 0.2s',
-                          }}
-                        >
-                          <div
-                            className="text-[13px] font-bold text-[#1A1A2E] mb-[3px]"
-                            style={{ fontFamily: 'var(--font-syne)' }}
-                          >
-                            {row.event.title}
-                          </div>
-                          <div className="text-[11px] text-[#7C6B8A]">{row.event.detail}</div>
-                          <div className="flex gap-1.5 mt-1.5 flex-wrap">
-                            {row.event.tags.map((tag, ti) => (
-                              <div
-                                key={ti}
-                                className="text-[10px] font-bold px-[7px] py-[2px] rounded-[5px]"
-                                style={{
-                                  fontFamily: 'var(--font-syne)',
-                                  background: tag.bg,
-                                  color: tag.color,
-                                }}
-                              >
-                                {tag.label}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        /* Empty slot */
-                        <div
-                          className="h-8 ml-[1px]"
-                          style={{ borderLeft: '2px dashed #F3E8FF' }}
-                        />
-                      )}
-                    </div>
+                      Schedule Builder
+                    </h2>
+                    <p className="text-xs text-[#7C6B8A] mt-0.5" style={{ fontFamily: 'var(--font-space-sc)' }}>
+                      Edit times and activities. Assign vendors to each slot.
+                    </p>
                   </div>
-                ))}
-              </div>
-
-              {/* Upcoming appointments */}
-              <div className="mt-4">
-                <div
-                  className="flex items-center justify-between mb-2.5 text-[13px] font-bold text-[#1A1A2E]"
-                  style={{ fontFamily: 'var(--font-syne)' }}
-                >
-                  Upcoming Appointments
-                  <span className="text-[11px] font-semibold text-[#4A0E6E] cursor-pointer">
-                    View All
+                  <span
+                    className="text-xs font-semibold text-[#7C6B8A]"
+                    style={{ fontFamily: 'var(--font-space-sc)' }}
+                  >
+                    {slots.length} slot{slots.length !== 1 ? 's' : ''}
                   </span>
                 </div>
-                {APPOINTMENTS.map((appt, i) => (
-                  <div
-                    key={i}
-                    className="bg-white rounded-[14px] p-3.5 mb-2.5 flex gap-3 cursor-pointer"
-                    style={{
-                      boxShadow: '0 2px 8px rgba(74,14,110,0.06)',
-                      border: '2px solid transparent',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    {/* Date box */}
-                    <div className="w-[42px] h-[42px] rounded-[10px] bg-[#F3E8FF] flex flex-col items-center justify-center flex-shrink-0">
-                      <span
-                        className="text-[16px] font-extrabold text-[#4A0E6E] leading-none"
-                        style={{ fontFamily: 'var(--font-syne)' }}
-                      >
-                        {appt.day}
-                      </span>
-                      <span className="text-[9px] text-[#7C6B8A] font-semibold uppercase">
-                        {appt.month}
-                      </span>
-                    </div>
-                    {/* Info */}
-                    <div className="flex-1">
-                      <div
-                        className="text-[13px] font-bold text-[#1A1A2E]"
-                        style={{ fontFamily: 'var(--font-syne)' }}
-                      >
-                        {appt.title}
-                      </div>
-                      <div className="text-[11px] text-[#7C6B8A] mt-0.5">{appt.detail}</div>
-                      <div
-                        className="inline-flex items-center gap-1 bg-[#F3E8FF] rounded-[5px] px-[7px] py-[2px] text-[10px] font-bold text-[#4A0E6E] mt-[5px]"
-                        style={{ fontFamily: 'var(--font-syne)' }}
-                      >
-                        {appt.vendor}
-                      </div>
-                    </div>
-                    {/* Time */}
-                    <div
-                      className="text-[12px] font-bold text-[#7C6B8A] whitespace-nowrap pt-0.5"
-                      style={{ fontFamily: 'var(--font-syne)' }}
-                    >
-                      {appt.time}
-                    </div>
-                  </div>
-                ))}
-              </div>
 
-              <div className="h-3.5" />
-            </div>
-          )}
-
-          {/* ══ TO-DO TAB ══ */}
-          {activeTab === 'todo' && (
-            <div className="px-5 py-3.5">
-              {/* AI suggestion */}
-              <div
-                className="bg-[#1A1A2E] rounded-[14px] p-3.5 flex gap-2.5 mb-3.5"
-                style={{ animation: 'fadeUp 0.4s ease both' }}
-              >
-                <span className="text-[18px] flex-shrink-0 mt-[1px]">✦</span>
-                <div>
-                  <div
-                    className="text-[12px] font-bold text-white mb-1"
-                    style={{ fontFamily: 'var(--font-syne)' }}
-                  >
-                    AI Suggestion — 47 days out
-                  </div>
-                  <p className="text-[12px] leading-[1.5]" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                    Based on your timeline, you should book a caterer this week. 3 vendors match your budget and are available Aug 14.
-                  </p>
-                  <div
-                    className="text-[11px] font-bold text-[#DDB8F5] mt-1.5 cursor-pointer"
-                    style={{ fontFamily: 'var(--font-syne)' }}
-                  >
-                    Browse Caterers →
-                  </div>
-                </div>
-              </div>
-
-              {/* Priority filter pills (static display) */}
-              <div className="flex gap-[7px] mb-3.5 overflow-x-auto scrollbar-hide">
-                {[
-                  { label: 'All (29)', bg: '#4A0E6E', color: 'white' },
-                  { label: '🔴 Urgent (3)', bg: '#FDEDEC', color: '#C0392B' },
-                  { label: '🟠 Soon (5)', bg: '#FEF3E2', color: '#E67E22' },
-                  { label: '🔵 Upcoming (3)', bg: '#F3E8FF', color: '#4A0E6E' },
-                  { label: '✓ Done (18)', bg: '#E6F7F2', color: '#0D9B6A' },
-                ].map((p, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-[5px] px-3 py-[6px] rounded-[20px] text-[11px] font-bold whitespace-nowrap flex-shrink-0 cursor-pointer"
-                    style={{ fontFamily: 'var(--font-syne)', background: p.bg, color: p.color }}
-                  >
-                    {p.label}
-                  </div>
-                ))}
-              </div>
-
-              {/* Todo groups */}
-              {TODO_GROUPS.map(group => (
-                <div key={group.id} className="mb-4">
-                  {/* Group header */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ background: group.dotColor }}
-                    />
-                    <span
-                      className="text-[11px] font-bold uppercase tracking-[1px] text-[#7C6B8A]"
-                      style={{ fontFamily: 'var(--font-syne)' }}
-                    >
-                      {group.name}
-                    </span>
-                    <div className="flex-1 h-px bg-[#F3E8FF]" />
-                    <span className="text-[10px] text-[#7C6B8A]">{group.count}</span>
-                  </div>
-
-                  {/* Items */}
-                  {group.items.map(item => {
-                    const isDone = doneTodos.has(item.id)
+                <div className="space-y-3">
+                  {slots.map(slot => {
+                    const assignedVendor = vendors.find(v => v.id === slot.vendorId)
                     return (
                       <div
-                        key={item.id}
-                        onClick={() => toggleTodo(item.id)}
-                        className="bg-white rounded-xl px-3.5 py-3 mb-2 flex items-start gap-2.5 cursor-pointer"
+                        key={slot.id}
+                        className="bg-white rounded-2xl px-4 py-3 flex items-center gap-3"
                         style={{
-                          boxShadow: '0 2px 6px rgba(74,14,110,0.05)',
-                          border: '2px solid transparent',
-                          opacity: isDone ? 0.55 : 1,
-                          transition: 'all 0.2s',
+                          boxShadow: '0 2px 10px rgba(74,14,110,0.07)',
+                          borderLeft: '4px solid #4A0E6E',
                         }}
                       >
-                        {/* Checkbox */}
-                        <div
-                          className="w-[22px] h-[22px] rounded-[6px] flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0 mt-[1px]"
-                          style={{
-                            border: `2px solid ${isDone ? '#0D9B6A' : '#DDB8F5'}`,
-                            background: isDone ? '#0D9B6A' : 'transparent',
-                            transition: 'all 0.2s',
-                          }}
-                        >
-                          {isDone ? '✓' : ''}
-                        </div>
+                        <DragHandle />
 
-                        {/* Body */}
-                        <div className="flex-1">
-                          <div
-                            className="text-[13px] font-bold leading-[1.3] mb-[3px]"
+                        {/* Time */}
+                        <input
+                          type="text"
+                          value={slot.time}
+                          onChange={e => updateSlot(slot.id, 'time', e.target.value)}
+                          placeholder="09:00 AM"
+                          className="w-[90px] text-sm font-bold bg-transparent outline-none flex-shrink-0"
+                          style={{ color: '#4A0E6E', fontFamily: 'var(--font-syne-sc)' }}
+                        />
+
+                        <div
+                          className="w-px h-6 flex-shrink-0"
+                          style={{ background: '#EDE5F7' }}
+                        />
+
+                        {/* Activity */}
+                        <input
+                          type="text"
+                          value={slot.activity}
+                          onChange={e => updateSlot(slot.id, 'activity', e.target.value)}
+                          placeholder="Activity description…"
+                          className="flex-1 text-sm bg-transparent outline-none min-w-0"
+                          style={{ color: '#1A1A2E', fontFamily: 'var(--font-space-sc)' }}
+                        />
+
+                        {/* Vendor assign */}
+                        {vendors.length > 0 && (
+                          <select
+                            value={slot.vendorId}
+                            onChange={e => updateSlot(slot.id, 'vendorId', e.target.value)}
+                            className="text-xs bg-transparent outline-none flex-shrink-0 max-w-[130px] truncate"
                             style={{
-                              fontFamily: 'var(--font-syne)',
-                              color: isDone ? '#7C6B8A' : '#1A1A2E',
-                              textDecoration: isDone ? 'line-through' : 'none',
+                              color: assignedVendor ? '#4A0E6E' : '#7C6B8A',
+                              fontFamily: 'var(--font-space-sc)',
+                              border: 'none',
                             }}
                           >
-                            {item.title}
-                          </div>
-                          <div className="flex gap-2 flex-wrap">
-                            {[item.meta1, item.meta2].map((m, mi) => (
-                              <span
-                                key={mi}
-                                className="text-[11px] text-[#7C6B8A] flex items-center gap-[3px]"
-                              >
-                                {m}
-                              </span>
+                            <option value="">— Unassigned —</option>
+                            {vendors.map(v => (
+                              <option key={v.id} value={v.id}>
+                                {v.business_name}
+                              </option>
                             ))}
-                          </div>
+                          </select>
+                        )}
+
+                        {/* Delete */}
+                        <button
+                          type="button"
+                          onClick={() => deleteSlot(slot.id)}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors hover:bg-red-50"
+                          aria-label="Remove slot"
+                        >
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                            <path d="M2 2l6 6M8 2l-6 6" stroke="#C0ACD4" strokeWidth="1.5" strokeLinecap="round" />
+                          </svg>
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Add slot */}
+                <button
+                  type="button"
+                  onClick={addSlot}
+                  className="mt-4 w-full py-3 rounded-2xl flex items-center justify-center gap-2 text-sm font-bold transition-colors hover:bg-[#F3E8FF]"
+                  style={{
+                    border: '2px dashed #DDB8F5',
+                    color: '#4A0E6E',
+                    fontFamily: 'var(--font-syne-sc)',
+                    background: 'transparent',
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                    <path d="M7 2v10M2 7h10" stroke="#4A0E6E" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                  Add time slot
+                </button>
+              </section>
+
+              {/* ── TO-DO LIST ── */}
+              <section>
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <h2
+                      className="text-lg font-bold text-[#1A1A2E]"
+                      style={{ fontFamily: 'var(--font-syne-sc)' }}
+                    >
+                      To-Do List
+                    </h2>
+                    <p className="text-xs text-[#7C6B8A] mt-0.5" style={{ fontFamily: 'var(--font-space-sc)' }}>
+                      Track everything leading up to your event day.
+                    </p>
+                  </div>
+                  <span
+                    className="text-xs font-semibold px-3 py-1 rounded-full"
+                    style={{ background: '#E6F7F2', color: '#0D9B6A', fontFamily: 'var(--font-space-sc)' }}
+                  >
+                    {doneCount} / {TODO_TASKS.length} done
+                  </span>
+                </div>
+
+                <div className="space-y-7">
+                  {todoGroups.map(({ group, meta, tasks }) => {
+                    const groupDone = tasks.filter(t => doneTaskIds.has(t.id)).length
+                    return (
+                      <div key={group}>
+                        {/* Group header */}
+                        <div className="flex items-center gap-3 mb-3">
+                          <div
+                            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                            style={{ background: meta.color }}
+                          />
+                          <span
+                            className="text-xs font-bold uppercase tracking-widest"
+                            style={{ color: meta.color, fontFamily: 'var(--font-syne-sc)' }}
+                          >
+                            {meta.label}
+                          </span>
+                          <div className="flex-1 h-px" style={{ background: '#EDE5F7' }} />
+                          <span className="text-xs text-[#7C6B8A]" style={{ fontFamily: 'var(--font-space-sc)' }}>
+                            {groupDone} / {tasks.length}
+                          </span>
                         </div>
 
-                        {/* Right: priority dot + assignee */}
-                        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                          <div
-                            className="w-2 h-2 rounded-full"
-                            style={{ background: item.priorityColor }}
-                          />
-                          <div
-                            className="text-[10px] text-[#7C6B8A] font-semibold rounded-[5px] px-1.5 py-[2px]"
-                            style={{ fontFamily: 'var(--font-syne)', background: '#F8F4FC' }}
-                          >
-                            {item.assign}
-                          </div>
+                        {/* Task items */}
+                        <div className="space-y-2">
+                          {tasks.map(task => {
+                            const isDone = doneTaskIds.has(task.id)
+                            return (
+                              <button
+                                key={task.id}
+                                type="button"
+                                onClick={() => toggleTask(task.id)}
+                                className="w-full text-left bg-white rounded-xl px-4 py-3 flex items-center gap-3 transition-all hover:shadow-sm"
+                                style={{
+                                  boxShadow: '0 1px 6px rgba(74,14,110,0.06)',
+                                  border: isDone ? `1.5px solid ${meta.color}22` : '1.5px solid transparent',
+                                  opacity: isDone ? 0.65 : 1,
+                                }}
+                              >
+                                {/* Checkbox */}
+                                <div
+                                  className="w-5 h-5 rounded-[5px] flex items-center justify-center flex-shrink-0 transition-all"
+                                  style={{
+                                    border: `2px solid ${isDone ? meta.color : '#DDB8F5'}`,
+                                    background: isDone ? meta.color : 'transparent',
+                                  }}
+                                >
+                                  {isDone && (
+                                    <svg width="9" height="9" viewBox="0 0 9 9" fill="none" aria-hidden="true">
+                                      <path d="M1.5 4.5l2 2L7.5 2" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                  )}
+                                </div>
+
+                                {/* Text */}
+                                <span
+                                  className="flex-1 text-sm"
+                                  style={{
+                                    fontFamily: 'var(--font-space-sc)',
+                                    color: isDone ? '#7C6B8A' : '#1A1A2E',
+                                    textDecoration: isDone ? 'line-through' : 'none',
+                                  }}
+                                >
+                                  {task.text}
+                                </span>
+
+                                {/* Category badge */}
+                                <span
+                                  className="text-[10px] font-semibold px-2.5 py-1 rounded-full flex-shrink-0"
+                                  style={{
+                                    background: meta.badge,
+                                    color: meta.badgeText,
+                                    fontFamily: 'var(--font-space-sc)',
+                                  }}
+                                >
+                                  {meta.label}
+                                </span>
+                              </button>
+                            )
+                          })}
                         </div>
                       </div>
                     )
                   })}
                 </div>
-              ))}
-
-              {/* Add task button */}
-              <button
-                className="w-full rounded-xl py-3 flex items-center justify-center gap-2 text-[13px] font-bold text-[#4A0E6E] cursor-pointer"
-                style={{
-                  fontFamily: 'var(--font-syne)',
-                  background: 'transparent',
-                  border: '2px dashed #DDB8F5',
-                  transition: 'all 0.2s',
-                }}
-              >
-                + Add New Task
-              </button>
-
-              <div className="h-3.5" />
+              </section>
             </div>
-          )}
 
-          {/* ══ REMINDERS TAB ══ */}
-          {activeTab === 'reminders' && (
-            <div className="px-5 py-3.5">
-              {/* Section heading */}
-              <div className="mb-3.5">
-                <div
-                  className="text-[13px] font-bold text-[#1A1A2E]"
-                  style={{ fontFamily: 'var(--font-syne)' }}
+            {/* ── RIGHT COLUMN ── */}
+            <div className="space-y-5 lg:sticky lg:top-24">
+
+              {/* Vendor contacts */}
+              <div
+                className="bg-white rounded-2xl p-5"
+                style={{ boxShadow: '0 4px 24px rgba(74,14,110,0.08)' }}
+              >
+                <h3
+                  className="text-sm font-bold text-[#1A1A2E] mb-4"
+                  style={{ fontFamily: 'var(--font-syne-sc)' }}
                 >
-                  Smart Reminders
-                </div>
-                <div className="text-[12px] text-[#7C6B8A] mt-[-2px]">
-                  AI-generated reminders based on your event timeline.
-                </div>
+                  Vendor Contacts
+                </h3>
+
+                {vendors.length === 0 ? (
+                  <div className="text-center py-6">
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3"
+                      style={{ background: '#F3E8FF' }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                        <path d="M9 2a3 3 0 100 6 3 3 0 000-6z" stroke="#4A0E6E" strokeWidth="1.2" />
+                        <path d="M3 16c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="#4A0E6E" strokeWidth="1.2" strokeLinecap="round" />
+                      </svg>
+                    </div>
+                    <p className="text-xs text-[#7C6B8A] text-center" style={{ fontFamily: 'var(--font-space-sc)' }}>
+                      No confirmed vendors yet. Bookings will appear here once confirmed.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {vendors.map(v => (
+                      <div
+                        key={v.id}
+                        className="flex items-start justify-between gap-3 pb-3"
+                        style={{ borderBottom: '1px solid #EDE5F7' }}
+                      >
+                        <div className="min-w-0">
+                          <p
+                            className="text-sm font-bold text-[#1A1A2E] truncate"
+                            style={{ fontFamily: 'var(--font-syne-sc)' }}
+                          >
+                            {v.business_name}
+                          </p>
+                          <span
+                            className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1"
+                            style={{ background: '#F3E8FF', color: '#4A0E6E', fontFamily: 'var(--font-space-sc)' }}
+                          >
+                            {v.category}
+                          </span>
+                          {v.phone && (
+                            <p className="text-xs text-[#7C6B8A] mt-1" style={{ fontFamily: 'var(--font-space-sc)' }}>
+                              {v.phone}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className="flex-shrink-0 text-xs font-semibold text-[#4A0E6E] hover:underline transition-all"
+                          style={{ fontFamily: 'var(--font-space-sc)' }}
+                        >
+                          Message
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <Link
+                  href="/vendors"
+                  className="mt-4 flex items-center justify-center gap-1.5 text-xs font-semibold text-[#4A0E6E] hover:underline transition-all"
+                  style={{ fontFamily: 'var(--font-space-sc)' }}
+                >
+                  Browse vendors
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+                    <path d="M2 9L9 2M9 2H4.5M9 2v4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </Link>
               </div>
 
-              {/* Reminder cards */}
-              {REMINDERS.map(r => {
-                const on = reminderToggles[r.id]
-                return (
-                  <div
-                    key={r.id}
-                    className="bg-white rounded-[14px] p-3.5 mb-2.5 flex gap-3 items-center cursor-pointer"
-                    style={{
-                      boxShadow: '0 2px 8px rgba(74,14,110,0.06)',
-                      borderLeft: `4px solid ${r.borderColor}`,
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    {/* Icon */}
-                    <div
-                      className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center text-[18px] flex-shrink-0"
-                      style={{ background: r.iconBg }}
-                    >
-                      {r.icon}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1">
-                      <div
-                        className="text-[13px] font-bold text-[#1A1A2E]"
-                        style={{ fontFamily: 'var(--font-syne)' }}
-                      >
-                        {r.title}
-                      </div>
-                      <div className="text-[11px] text-[#7C6B8A] mt-0.5">{r.detail}</div>
-                    </div>
-
-                    {/* Time + toggle */}
-                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                      <span
-                        className="text-[11px] font-bold whitespace-nowrap"
-                        style={{
-                          fontFamily: 'var(--font-syne)',
-                          color: r.urgent ? '#C0392B' : '#7C6B8A',
-                        }}
-                      >
-                        {r.time}
-                      </span>
-                      <ToggleSwitch on={on} onClick={() => toggleReminder(r.id)} />
-                    </div>
-                  </div>
-                )
-              })}
-
-              <div className="h-3.5" />
-            </div>
-          )}
-        </div>
-
-        {/* ── BOTTOM NAV ── */}
-        <div className="flex bg-white border-t border-[#F3E8FF] pt-2.5 pb-4 flex-shrink-0">
-          {[
-            { icon: '🏠', label: 'Home', active: false },
-            { icon: '🔍', label: 'Vendors', active: false },
-            { icon: '📋', label: 'My Event', active: true },
-            { icon: '💬', label: 'Messages', active: false },
-            { icon: '👤', label: 'Profile', active: false },
-          ].map(n => (
-            <div key={n.label} className="flex-1 flex flex-col items-center gap-[3px] cursor-pointer py-1.5">
-              <span className="text-[20px]">{n.icon}</span>
-              <span
-                className="text-[10px] font-bold"
-                style={{ fontFamily: 'var(--font-syne)', color: n.active ? '#4A0E6E' : '#7C6B8A' }}
+              {/* Emergency checklist */}
+              <div
+                className="bg-white rounded-2xl p-5"
+                style={{ boxShadow: '0 4px 24px rgba(74,14,110,0.08)' }}
               >
-                {n.label}
-              </span>
+                <div className="flex items-center gap-2 mb-4">
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: '#FEF3E2' }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                      <circle cx="7" cy="7" r="5.5" stroke="#E67E22" strokeWidth="1.2" />
+                      <path d="M7 4.5v3" stroke="#E67E22" strokeWidth="1.2" strokeLinecap="round" />
+                      <circle cx="7" cy="9.5" r="0.7" fill="#E67E22" />
+                    </svg>
+                  </div>
+                  <h3
+                    className="text-sm font-bold text-[#1A1A2E]"
+                    style={{ fontFamily: 'var(--font-syne-sc)' }}
+                  >
+                    Emergency Kit
+                  </h3>
+                </div>
+
+                <p className="text-xs text-[#7C6B8A] mb-4" style={{ fontFamily: 'var(--font-space-sc)' }}>
+                  Pack these items the night before.
+                </p>
+
+                <ul className="space-y-2.5">
+                  {EMERGENCY_ITEMS.map((item, i) => (
+                    <li key={i} className="flex items-center gap-2.5">
+                      <div
+                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        style={{ background: '#DDB8F5' }}
+                      />
+                      <span
+                        className="text-sm text-[#1A1A2E]/75"
+                        style={{ fontFamily: 'var(--font-space-sc)' }}
+                      >
+                        {item}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
             </div>
-          ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
