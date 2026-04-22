@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
 
@@ -167,7 +167,9 @@ function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: ()
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function TimelinePage() {
-  const router = useRouter()
+  const router       = useRouter()
+  const searchParams = useSearchParams()
+  const eventId      = searchParams.get('eventId')
 
   const [event,    setEvent]    = useState<EventRow | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
@@ -183,13 +185,19 @@ export default function TimelinePage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.replace('/auth/signin'); return }
 
+    let eventsQuery = supabase
+      .from('events')
+      .select('id, event_type, event_date, location, guest_count, total_budget, status, created_at')
+      .eq('client_id', user.id)
+
+    if (eventId) {
+      eventsQuery = eventsQuery.eq('id', eventId)
+    } else {
+      eventsQuery = eventsQuery.order('created_at', { ascending: false }).limit(1)
+    }
+
     const [{ data: events }, { data: bk }] = await Promise.all([
-      supabase
-        .from('events')
-        .select('id, event_type, event_date, location, guest_count, total_budget, status, created_at')
-        .eq('client_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1),
+      eventsQuery,
       supabase
         .from('bookings')
         .select('id, vendor_profiles(business_name, category)')
@@ -210,7 +218,7 @@ export default function TimelinePage() {
     } catch { /* ignore */ }
 
     setLoading(false)
-  }, [router])
+  }, [router, eventId])
 
   useEffect(() => { load() }, [load])
 

@@ -242,12 +242,36 @@ export default function EventSummaryPage() {
             evnti<span style={{ color: '#DDB8F5' }}>.</span>
           </Link>
 
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-3">
             <Link
               href="/dashboard"
               style={{ fontFamily: 'var(--font-space)', fontSize: '0.875rem', fontWeight: 500, color: 'rgba(255,255,255,0.65)', textDecoration: 'none' }}
             >
               My Dashboard
+            </Link>
+            <Link
+              href={`/timeline?eventId=${id}`}
+              style={{
+                background: 'rgba(255,255,255,0.09)', color: 'rgba(255,255,255,0.8)',
+                borderRadius: 100, padding: '0.45rem 1rem',
+                fontFamily: 'var(--font-space)', fontSize: '0.8rem', fontWeight: 500,
+                textDecoration: 'none', flexShrink: 0,
+                border: '1px solid rgba(255,255,255,0.15)',
+              }}
+            >
+              Timeline
+            </Link>
+            <Link
+              href={`/budget?eventId=${id}`}
+              style={{
+                background: 'rgba(255,255,255,0.09)', color: 'rgba(255,255,255,0.8)',
+                borderRadius: 100, padding: '0.45rem 1rem',
+                fontFamily: 'var(--font-space)', fontSize: '0.8rem', fontWeight: 500,
+                textDecoration: 'none', flexShrink: 0,
+                border: '1px solid rgba(255,255,255,0.15)',
+              }}
+            >
+              Budget
             </Link>
             <Link
               href="/ai-plan"
