@@ -269,7 +269,7 @@ export default function MessagesPage() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `booking_id=eq.${activeBookingId}` },
-        (payload) => {
+        (payload: { new: Message }) => {
           setMessages(prev => [...prev, payload.new as Message])
           if (userId && payload.new.sender_id !== userId) {
             supabase.from('messages').update({ read: true }).eq('id', payload.new.id).then(() => {})
