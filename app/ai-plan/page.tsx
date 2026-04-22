@@ -534,35 +534,69 @@ export default function AIPlanPage() {
 
           {/* Credit counter / no-credits banner */}
           {noCredits ? (
-            <div
-              className="rounded-2xl px-5 py-4 mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-              style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)' }}
-            >
-              <p className="text-sm" style={{ color: '#FCA5A5', fontFamily: "'Space Grotesk', sans-serif", margin: 0 }}>
-                You&apos;ve used all your Eve credits. Upgrade to get more.
-              </p>
-              <button
+            <div className="mb-3">
+              <a
+                href="https://buy.stripe.com/test_fZuaEY9ZQeLo5Ez6Ua4AU00"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-2xl px-5 py-5 transition-opacity hover:opacity-90"
                 style={{
-                  background: '#4A0E6E', color: 'white', border: 'none',
-                  borderRadius: 100, padding: '0.45rem 1.25rem',
-                  fontFamily: "'Space Grotesk', sans-serif", fontSize: '0.8rem', fontWeight: 600,
-                  cursor: 'pointer', flexShrink: 0,
+                  background: 'linear-gradient(135deg, rgba(74,14,110,0.6), rgba(107,31,154,0.5))',
+                  border: '1.5px solid rgba(221,184,245,0.35)',
+                  textDecoration: 'none',
+                  cursor: 'pointer',
                 }}
               >
-                Upgrade
-              </button>
+                <p
+                  className="text-base font-bold mb-1"
+                  style={{ color: '#DDB8F5', fontFamily: "'Space Grotesk', sans-serif", margin: '0 0 4px' }}
+                >
+                  You&apos;ve used all your Eve credits.
+                </p>
+                <p
+                  className="text-sm"
+                  style={{ color: 'rgba(255,255,255,0.75)', fontFamily: "'Space Grotesk', sans-serif", margin: 0 }}
+                >
+                  Get 100 more credits for $9.99 →
+                </p>
+              </a>
+              <p
+                className="text-xs mt-2 text-center"
+                style={{ color: 'rgba(255,255,255,0.35)', fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                After upgrading, contact us at{' '}
+                <a
+                  href="mailto:hello@evntiapp.com"
+                  style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'underline' }}
+                >
+                  hello@evntiapp.com
+                </a>
+                {' '}to have your credits added.
+              </p>
             </div>
           ) : credits !== null && (
-            <p
-              className="text-xs mb-2"
-              style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                color: credits > 5 ? '#4ade80' : credits >= 3 ? '#fbbf24' : '#f87171',
-                textAlign: 'right',
-              }}
-            >
-              {credits} credit{credits !== 1 ? 's' : ''} remaining
-            </p>
+            <div className="mb-2 text-right">
+              <p
+                className="text-xs"
+                style={{
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  color: credits > 5 ? '#4ade80' : credits >= 3 ? '#fbbf24' : '#f87171',
+                }}
+              >
+                {credits} credit{credits !== 1 ? 's' : ''} remaining
+              </p>
+              <p className="text-xs mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'rgba(255,255,255,0.4)' }}>
+                10 free credits included. Need more?{' '}
+                <a
+                  href="https://buy.stripe.com/test_fZuaEY9ZQeLo5Ez6Ua4AU00"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#DDB8F5', textDecoration: 'underline' }}
+                >
+                  Get 100 credits for $9.99
+                </a>
+              </p>
+            </div>
           )}
 
           <div className="flex gap-2 items-end">

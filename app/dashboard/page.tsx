@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
-import { Home, Store, Sparkles, Calendar, Grid } from 'lucide-react'
+import { Home, Store, Sparkles, MessageCircle, Grid } from 'lucide-react'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -306,6 +306,8 @@ export default function ClientDashboardPage() {
                 { label: 'Timeline',       href: '/timeline' },
                 { label: 'Budget',         href: '/budget' },
                 { label: 'Schedule',       href: '/schedule' },
+                { label: 'Guests',         href: '/guests' },
+                { label: 'Documents',      href: '/documents' },
                 { label: 'Messages',       href: '/messages' },
               ] as { label: string; href?: string; action?: () => void }[]).map(item => {
                 const active = activeNav === item.label
@@ -649,9 +651,7 @@ export default function ClientDashboardPage() {
               { label: 'Plan new event', href: '/onboarding' },
               { label: 'Find vendors',   href: '/vendors' },
               { label: 'Ask Eve',        href: '/ai-plan' },
-              { label: 'Timeline',       href: '/timeline' },
-              { label: 'Budget',         href: '/budget' },
-              { label: 'Schedule',       href: '/schedule' },
+              { label: 'Messages',       href: '/messages' },
             ] as { label: string; href: string }[]).map(item => (
               <Link
                 key={item.label}
@@ -711,6 +711,8 @@ export default function ClientDashboardPage() {
                   { label: 'Timeline',     href: '/timeline' },
                   { label: 'Budget',       href: '/budget' },
                   { label: 'Schedule',     href: '/schedule' },
+                  { label: 'Guests',       href: '/guests' },
+                  { label: 'Documents',    href: '/documents' },
                   { label: 'Messages',     href: '/messages' },
                 ] as { label: string; href?: string; action?: () => void }[]).map(item =>
                   item.href ? (
@@ -746,7 +748,7 @@ export default function ClientDashboardPage() {
             { icon: <Home  size={20} />, label: 'Home',     href: '/dashboard' },
             { icon: <Store size={20} />, label: 'Vendors',  href: '/vendors' },
             { icon: <Sparkles size={20} />, label: 'Eve',   href: '/ai-plan' },
-            { icon: <Calendar size={20} />, label: 'Timeline', href: '/timeline' },
+            { icon: <MessageCircle size={20} />, label: 'Messages', href: '/messages' },
             { icon: <Grid size={20} />,  label: 'More',     action: () => setMoreMenuOpen(o => !o) },
           ] as { icon: React.ReactNode; label: string; href?: string; action?: () => void }[]).map(item => {
             const isMore = item.label === 'More'

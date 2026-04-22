@@ -45,6 +45,14 @@ Keep responses under 80 words. Be warm but concise. Never robotic. Never generic
 
 You have access to evnti's verified vendor list. ALWAYS recommend specific vendors from this list by name when relevant. Never suggest vendors outside this list. If no vendor matches, say 'we are onboarding vendors in that category soon.'`
 
+const ADMIN_EMAILS = [
+  'easyeventsapps@gmail.com',
+  'nabilah@evntiapp.com',
+  'kemifarinde.eventi@gmail.com',
+  'odusanwokemi@gmail.com',
+  'farindekemi04@gmail.com',
+]
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -52,21 +60,26 @@ export async function POST(req: NextRequest) {
 
     // ── Credit check ──────────────────────────────────────────────────────────
     let currentCredits: number = 0
+    let isAdmin = false
 
     if (user_id) {
       const { data: userData } = await supabase
         .from('users')
-        .select('eve_credits')
+        .select('eve_credits, email')
         .eq('id', user_id)
         .single()
 
       if (userData) {
-        currentCredits = userData.eve_credits ?? 0
-        if (currentCredits <= 0) {
-          return NextResponse.json(
-            { error: 'no_credits', message: 'You have used all your Eve credits.' },
-            { status: 429 }
-          )
+        isAdmin = ADMIN_EMAILS.includes(userData.email || '')
+
+        if (!isAdmin) {
+          currentCredits = userData.eve_credits ?? 0
+          if (currentCredits <= 0) {
+            return NextResponse.json(
+              { error: 'no_credits', message: 'You have used all your Eve credits.' },
+              { status: 429 }
+            )
+          }
         }
       }
     }
@@ -110,7 +123,7 @@ ${vendorList}`
     const text = message.content[0].type === 'text' ? message.content[0].text : ''
 
     // ── Decrement credits ─────────────────────────────────────────────────────
-    if (user_id && currentCredits !== null) {
+    if (user_id && !isAdmin && currentCredits > 0) {
       await supabase
         .from('users')
         .update({ eve_credits: currentCredits - 1 })
