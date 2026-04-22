@@ -1,436 +1,716 @@
 'use client'
-import { useState } from 'react'
-import { Syne, Epilogue } from 'next/font/google'
+
+import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { Syne, Space_Grotesk } from 'next/font/google'
+import { getSupabaseClient } from '@/lib/supabase'
 
 const syne = Syne({ subsets: ['latin'], weight: ['400', '600', '700', '800'], variable: '--font-syne' })
-const epilogue = Epilogue({ subsets: ['latin'], weight: ['300', '400', '500', '600'], variable: '--font-epilogue' })
+const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700'], variable: '--font-space' })
 
-type Tab = 'breakdown' | 'transactions' | 'forecast'
-type StatusType = 'on' | 'over' | 'under'
+// ── Types ──────────────────────────────────────────────────────────────────────
 
-// ── Data types ─────────────────────────────────────────────────────────────────
-interface CategoryRow {
-  icon: string
-  iconBg: string
-  name: string
-  spent: string
-  budget: string
-  barPct: number
-  barColor: string
-  status: StatusType
-  statusLabel: string
-  urgentBorder?: boolean
-  amtColor?: string
-}
-
-interface Transaction {
+interface EventRow {
   id: string
-  icon: string
-  iconBg: string
+  event_type: string | null
+  event_date: string | null
+  total_budget: number | null
+  created_at: string | null
+}
+
+interface Booking {
+  id: string
+  deposit_amount: number | null
+  status: string
+  created_at: string
+  vendor_profiles: { business_name: string; category: string } | null
+}
+
+interface ManualExpense {
+  id: string
+  description: string
+  amount: number
+  category: string
+  date: string
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function formatCurrency(n: number): string {
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+// ── Budget category config ─────────────────────────────────────────────────────
+
+interface BudgetCat {
   name: string
-  detail: string
-  amount: string
-  isCredit?: boolean
+  pct: number
+  color: string
 }
 
-interface UpcomingPayment {
-  icon: string
-  iconBg: string
-  name: string
-  due: string
-  amount: string
-  amtColor: string
+const BUDGET_CATS: BudgetCat[] = [
+  { name: 'Venue',           pct: 30, color: '#6B1F9A' },
+  { name: 'Food & Catering', pct: 25, color: '#5DADE2' },
+  { name: 'Photography',     pct: 10, color: '#E67E22' },
+  { name: 'Music/DJ',        pct:  8, color: '#0D9B6A' },
+  { name: 'Decor & Florals', pct: 10, color: '#E74C3C' },
+  { name: 'Cake',            pct:  5, color: '#F39C12' },
+  { name: 'Beauty & Hair',   pct:  5, color: '#D4AC0D' },
+  { name: 'Other',           pct:  7, color: '#7C6B8A' },
+]
+
+const EXPENSE_CATS = BUDGET_CATS.map(c => c.name)
+
+// Map vendor_profiles.category → budget category name
+function mapVendorCat(vendorCat: string): string {
+  const c = vendorCat.toLowerCase()
+  if (c.includes('venue'))                         return 'Venue'
+  if (c.includes('cater') || c.includes('food'))   return 'Food & Catering'
+  if (c.includes('photo'))                         return 'Photography'
+  if (c.includes('dj') || c.includes('music') || c.includes('entertain') || c === 'mc') return 'Music/DJ'
+  if (c.includes('decor') || c.includes('floral')) return 'Decor & Florals'
+  if (c.includes('cake'))                          return 'Cake'
+  if (c.includes('beauty') || c.includes('hair') || c.includes('makeup')) return 'Beauty & Hair'
+  return 'Other'
 }
 
-// ── Static data ────────────────────────────────────────────────────────────────
-const BAR_SEGMENTS = [
-  { width: '32%', color: '#6B1F9A', label: 'Venue' },
-  { width: '21%', color: '#5DADE2', label: 'Photo' },
-  { width: '10%', color: '#E67E22', label: 'Florals' },
-  { width: '9%',  color: '#0D9B6A', label: 'DJ' },
-  { width: '7%',  color: '#D4AC0D', label: 'Beauty' },
-  { width: '6%',  color: '#E74C3C', label: 'Bar' },
-  { width: '15%', color: 'rgba(255,255,255,0.06)', label: '' },
-]
+// ── Skeleton ───────────────────────────────────────────────────────────────────
 
-const STATUS_STYLES: Record<StatusType, { bg: string; color: string }> = {
-  on:    { bg: '#E6F7F2', color: '#0D9B6A' },
-  over:  { bg: '#FDEDEC', color: '#C0392B' },
-  under: { bg: '#F3E8FF', color: '#4A0E6E' },
+function Skeleton() {
+  return (
+    <div className="min-h-screen bg-[#F8F4FC] animate-pulse">
+      <div className="h-16 bg-[#1A1A2E]" />
+      <div className="h-52 bg-[#2a1a3e]" />
+      <div className="max-w-4xl mx-auto px-6 py-10 space-y-5">
+        {[180, 320, 260, 200].map(h => (
+          <div key={h} className="rounded-2xl bg-white" style={{ height: h, boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }} />
+        ))}
+      </div>
+    </div>
+  )
 }
 
-const CATEGORIES: CategoryRow[] = [
-  {
-    icon: '🏛️', iconBg: 'rgba(107,31,154,0.1)',
-    name: 'Venue', spent: '$1,375', budget: 'of $5,500',
-    barPct: 25, barColor: '#6B1F9A',
-    status: 'under', statusLabel: 'Deposit paid · Balance Jul 10',
-  },
-  {
-    icon: '📸', iconBg: 'rgba(93,173,226,0.1)',
-    name: 'Photography', spent: '$3,100', budget: 'of $3,100',
-    barPct: 100, barColor: '#5DADE2',
-    status: 'on', statusLabel: '✓ Fully paid',
-  },
-  {
-    icon: '🌸', iconBg: 'rgba(230,126,34,0.1)',
-    name: 'Florals & Décor', spent: '$570', budget: 'of $2,200',
-    barPct: 26, barColor: '#E67E22',
-    status: 'under', statusLabel: 'Deposit paid · Balance Aug 1',
-  },
-  {
-    icon: '🎵', iconBg: 'rgba(13,155,106,0.1)',
-    name: 'DJ / Music', spent: '$362', budget: 'of $1,450',
-    barPct: 25, barColor: '#0D9B6A',
-    status: 'under', statusLabel: 'Deposit paid',
-  },
-  {
-    icon: '🍽️', iconBg: '#FDEDEC',
-    name: 'Catering', spent: '$0', budget: 'of $4,800',
-    barPct: 0, barColor: '#C0392B',
-    status: 'over', statusLabel: '⚠ Not booked — urgent',
-    urgentBorder: true, amtColor: '#C0392B',
-  },
-  {
-    icon: '💄', iconBg: '#FEF9E7',
-    name: 'Hair & Makeup', spent: '$0', budget: 'of $1,250',
-    barPct: 0, barColor: '#D4AC0D',
-    status: 'under', statusLabel: 'Not yet booked',
-  },
-]
+// ── Ring SVG ───────────────────────────────────────────────────────────────────
 
-const TRANSACTIONS: Transaction[] = [
-  { id: 't1', icon: '🌸', iconBg: '#F3E8FF', name: 'Bloom & Co — Deposit',        detail: 'Jun 25 · Signature Package · Stripe',  amount: '-$570' },
-  { id: 't2', icon: '🎵', iconBg: '#F3E8FF', name: 'DJ Smooth — Deposit',          detail: 'Jun 24 · Standard Package · Stripe',   amount: '-$362' },
-  { id: 't3', icon: '📸', iconBg: '#F3E8FF', name: 'Lens & Light Studio — Full',   detail: 'Jun 24 · Premium Package · Stripe',    amount: '-$3,100' },
-  { id: 't4', icon: '🏛️', iconBg: '#F3E8FF', name: 'The Astorian — Deposit',       detail: 'Jun 23 · Venue Booking · Stripe',      amount: '-$1,375' },
-  { id: 't5', icon: '💚', iconBg: '#E6F7F2', name: 'Refund — Venue Change Fee',    detail: 'Jun 23 · Waived by venue · Stripe',    amount: '+$150', isCredit: true },
-]
+function ProgressRing({ pct }: { pct: number }) {
+  const r = 80
+  const circ = 2 * Math.PI * r
+  const offset = circ * (1 - Math.min(pct, 100) / 100)
+  return (
+    <svg width="200" height="200" viewBox="0 0 200 200" style={{ transform: 'rotate(-90deg)' }}>
+      <circle cx="100" cy="100" r={r} fill="none" stroke="rgba(74,14,110,0.1)" strokeWidth="14" />
+      <circle
+        cx="100" cy="100" r={r} fill="none"
+        stroke="url(#ringGrad)" strokeWidth="14"
+        strokeLinecap="round"
+        strokeDasharray={circ}
+        strokeDashoffset={offset}
+        style={{ transition: 'stroke-dashoffset 0.8s ease' }}
+      />
+      <defs>
+        <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#DDB8F5" />
+          <stop offset="100%" stopColor="#4A0E6E" />
+        </linearGradient>
+      </defs>
+    </svg>
+  )
+}
 
-const UPCOMING_PAYMENTS: UpcomingPayment[] = [
-  { icon: '🏛️', iconBg: '#FDEDEC', name: 'Venue Balance — The Astorian', due: 'Due Jul 10', amount: '$2,750', amtColor: '#C0392B' },
-  { icon: '🌸', iconBg: '#FEF3E2', name: 'Florist Balance — Bloom & Co',  due: 'Due Aug 1',  amount: '$1,650', amtColor: '#E67E22' },
-  { icon: '🎵', iconBg: '#F3E8FF', name: 'DJ Balance — DJ Smooth',        due: 'Due Aug 7',  amount: '$1,088', amtColor: '#4A0E6E' },
-]
+// ── Status badge helper ────────────────────────────────────────────────────────
+
+function statusBadge(bookingStatus: string): { label: string; bg: string; color: string } {
+  switch (bookingStatus.toLowerCase()) {
+    case 'confirmed': return { label: 'Confirmed', bg: '#D1FAE5', color: '#065F46' }
+    case 'paid':      return { label: 'Paid',      bg: '#D1FAE5', color: '#065F46' }
+    case 'pending':   return { label: 'Pending',   bg: '#FEF9E7', color: '#D4AC0D' }
+    case 'cancelled': return { label: 'Cancelled', bg: '#FDEDEC', color: '#C0392B' }
+    default:          return { label: bookingStatus, bg: '#F3F4F6', color: '#6B7280' }
+  }
+}
 
 // ── Page ───────────────────────────────────────────────────────────────────────
+
 export default function BudgetPage() {
-  const [activeTab, setActiveTab] = useState<Tab>('breakdown')
+  const router = useRouter()
+
+  const [event,    setEvent]    = useState<EventRow | null>(null)
+  const [bookings, setBookings] = useState<Booking[]>([])
+  const [loading,  setLoading]  = useState(true)
+  const [noEvent,  setNoEvent]  = useState(false)
+
+  // manual expenses
+  const [expenses,    setExpenses]    = useState<ManualExpense[]>([])
+  const [showForm,    setShowForm]    = useState(false)
+  const [formDesc,    setFormDesc]    = useState('')
+  const [formAmount,  setFormAmount]  = useState('')
+  const [formCat,     setFormCat]     = useState(EXPENSE_CATS[0])
+
+  const load = useCallback(async () => {
+    const supabase = getSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.replace('/auth/signin'); return }
+
+    const [{ data: events }, { data: bk }] = await Promise.all([
+      supabase
+        .from('events')
+        .select('id, event_type, event_date, total_budget, created_at')
+        .eq('client_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1),
+      supabase
+        .from('bookings')
+        .select('id, deposit_amount, status, created_at, vendor_profiles(business_name, category)')
+        .eq('client_email', user.email),
+    ])
+
+    const ev = events?.[0] ?? null
+    if (!ev) { setNoEvent(true); setLoading(false); return }
+
+    setEvent(ev as EventRow)
+    setBookings((bk ?? []) as Booking[])
+
+    try {
+      const stored = JSON.parse(localStorage.getItem(`budget_expenses_${ev.id}`) ?? '[]')
+      setExpenses(stored)
+    } catch { /* ignore */ }
+
+    setLoading(false)
+  }, [router])
+
+  useEffect(() => { load() }, [load])
+
+  // persist expenses
+  useEffect(() => {
+    if (!event) return
+    localStorage.setItem(`budget_expenses_${event.id}`, JSON.stringify(expenses))
+  }, [expenses, event])
+
+  function addExpense() {
+    const amt = parseFloat(formAmount)
+    if (!formDesc.trim() || isNaN(amt) || amt <= 0) return
+    setExpenses(prev => [...prev, {
+      id: Date.now().toString(),
+      description: formDesc.trim(),
+      amount: amt,
+      category: formCat,
+      date: new Date().toISOString(),
+    }])
+    setFormDesc(''); setFormAmount(''); setFormCat(EXPENSE_CATS[0]); setShowForm(false)
+  }
+
+  function removeExpense(id: string) {
+    setExpenses(prev => prev.filter(e => e.id !== id))
+  }
+
+  if (loading)  return <Skeleton />
+
+  if (noEvent) return (
+    <div
+      className={`${syne.variable} ${spaceGrotesk.variable} min-h-screen flex flex-col items-center justify-center gap-5`}
+      style={{ background: '#F8F4FC', fontFamily: 'var(--font-space), sans-serif' }}
+    >
+      <p style={{ fontFamily: 'var(--font-syne)', fontSize: 22, fontWeight: 700, color: '#1A1A2E' }}>
+        Start planning to track your budget
+      </p>
+      <Link
+        href="/onboarding"
+        style={{
+          background: '#4A0E6E', color: 'white', borderRadius: 100, padding: '0.65rem 1.6rem',
+          fontFamily: 'var(--font-syne)', fontSize: '0.9rem', fontWeight: 700, textDecoration: 'none',
+        }}
+      >
+        Create your event
+      </Link>
+    </div>
+  )
+
+  const ev           = event!
+  const totalBudget  = ev.total_budget ?? 0
+
+  // spent = paid bookings deposits + manual expenses
+  const bookingSpent = bookings
+    .filter(b => b.status === 'paid' || b.status === 'confirmed')
+    .reduce((sum, b) => sum + (b.deposit_amount ?? 0), 0)
+  const manualSpent  = expenses.reduce((sum, e) => sum + e.amount, 0)
+  const totalSpent   = bookingSpent + manualSpent
+  const remaining    = totalBudget - totalSpent
+  const pctSpent     = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0
+
+  // build per-category actual spend map (bookings + manual)
+  const catSpend: Record<string, number> = {}
+  for (const b of bookings) {
+    if (!b.vendor_profiles) continue
+    const cat = mapVendorCat(b.vendor_profiles.category)
+    catSpend[cat] = (catSpend[cat] ?? 0) + (b.deposit_amount ?? 0)
+  }
+  for (const e of expenses) {
+    catSpend[e.category] = (catSpend[e.category] ?? 0) + e.amount
+  }
+
+  // per-category booked vendor name
+  const catVendor: Record<string, string> = {}
+  for (const b of bookings) {
+    if (!b.vendor_profiles) continue
+    const cat = mapVendorCat(b.vendor_profiles.category)
+    if (!catVendor[cat]) catVendor[cat] = b.vendor_profiles.business_name
+  }
+
+  const card: React.CSSProperties = {
+    background: 'white', borderRadius: 20, padding: '1.5rem',
+    boxShadow: '0 1px 4px rgba(74,14,110,0.07)', marginBottom: '1.25rem',
+  }
 
   return (
     <div
-      className={`${syne.variable} ${epilogue.variable} min-h-screen bg-[#1A1A2E] flex items-center justify-center p-6`}
-      style={{ fontFamily: 'var(--font-epilogue), sans-serif' }}
+      className={`${syne.variable} ${spaceGrotesk.variable} min-h-screen`}
+      style={{ background: '#F8F4FC', fontFamily: 'var(--font-space), sans-serif' }}
     >
-      {/* Phone frame */}
-      <div
-        className="w-[375px] h-[812px] bg-[#F8F4FC] rounded-[48px] overflow-hidden flex flex-col"
-        style={{ boxShadow: '0 40px 80px rgba(0,0,0,0.5), 0 0 0 10px #2D2D45, 0 0 0 12px #3D3D55' }}
-      >
-        {/* Notch */}
-        <div className="w-[120px] h-8 bg-[#1A1A2E] rounded-b-[20px] mx-auto flex-shrink-0" />
 
-        {/* ── HEADER ── */}
-        <div className="bg-[#1A1A2E] px-5 pt-3.5 pb-5 flex-shrink-0 relative overflow-hidden">
-          <div
-            className="absolute w-[220px] h-[220px] rounded-full pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(107,31,154,0.3) 0%, transparent 70%)', top: '-80px', right: '-50px' }}
-          />
+      {/* ── TOP NAV ── */}
+      <nav style={{ background: '#1A1A2E', position: 'sticky', top: 0, zIndex: 40 }}>
+        <div className="max-w-4xl mx-auto px-6 h-16 flex items-center gap-4">
+          <Link
+            href="/"
+            style={{
+              fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: '1.35rem',
+              letterSpacing: '-0.03em', color: 'white', textDecoration: 'none', flexShrink: 0,
+            }}
+          >
+            evnti<span style={{ color: '#DDB8F5' }}>.</span>
+          </Link>
 
-          {/* Top bar */}
-          <div className="flex items-center justify-between mb-4 relative z-[1]">
-            <span className="text-[20px] font-extrabold text-white tracking-[-0.4px]" style={{ fontFamily: 'var(--font-syne)' }}>
-              Budget Tracker
-            </span>
-            <div className="flex gap-2">
-              {['📊', '+ Add'].map(btn => (
-                <button
-                  key={btn}
-                  className="h-[34px] px-3 rounded-[10px] flex items-center justify-center text-[15px] text-white"
-                  style={{ background: 'rgba(255,255,255,0.08)', border: 'none', fontFamily: 'var(--font-syne)', fontSize: btn === '+ Add' ? '12px' : undefined, fontWeight: btn === '+ Add' ? 700 : undefined }}
-                >
-                  {btn}
-                </button>
-              ))}
-            </div>
+          <div className="flex-1 flex justify-center min-w-0 px-4">
+            {ev.event_type && (
+              <span style={{
+                fontFamily: 'var(--font-syne)', fontSize: '0.85rem', fontWeight: 700,
+                color: 'rgba(255,255,255,0.72)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {ev.event_type}
+              </span>
+            )}
           </div>
 
-          {/* Budget hero */}
-          <div className="relative z-[1] text-center mb-4">
-            <div
-              className="text-[11px] font-bold uppercase tracking-[1px] mb-1"
-              style={{ fontFamily: 'var(--font-syne)', color: 'rgba(255,255,255,0.4)' }}
-            >
-              Total Spent
+          <Link
+            href="/dashboard"
+            style={{
+              fontFamily: 'var(--font-space)', fontSize: '0.85rem', fontWeight: 500,
+              color: 'rgba(255,255,255,0.6)', textDecoration: 'none', flexShrink: 0,
+            }}
+          >
+            My Dashboard
+          </Link>
+        </div>
+      </nav>
+
+      {/* ── HERO ── */}
+      <div className="relative overflow-hidden" style={{ minHeight: 220 }}>
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: "url('/images/feature.jpg')",
+          backgroundSize: 'cover', backgroundPosition: 'center',
+        }} />
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(135deg, rgba(26,26,46,0.93) 0%, rgba(74,14,110,0.86) 100%)',
+        }} />
+
+        <div className="relative z-10 max-w-4xl mx-auto px-6 py-12">
+          <p style={{
+            fontFamily: 'var(--font-space)', fontSize: '0.65rem', fontWeight: 700,
+            letterSpacing: '0.18em', textTransform: 'uppercase', color: '#DDB8F5',
+            marginBottom: '0.5rem',
+          }}>
+            Financial Overview
+          </p>
+          <h1 style={{
+            fontFamily: 'var(--font-syne)', fontWeight: 800,
+            fontSize: 'clamp(1.6rem, 3.5vw, 2.4rem)',
+            letterSpacing: '-0.03em', color: 'white', lineHeight: 1.15,
+            marginBottom: '1.5rem',
+          }}>
+            Budget Tracker
+          </h1>
+
+          {/* Stat pills */}
+          <div className="flex flex-wrap gap-3">
+            {[
+              { label: 'Total Budget', value: formatCurrency(totalBudget), color: 'white' },
+              { label: 'Spent',        value: formatCurrency(totalSpent),  color: totalSpent > totalBudget ? '#FF6B6B' : '#FCA5A5' },
+              { label: 'Remaining',    value: formatCurrency(Math.max(remaining, 0)), color: remaining >= 0 ? '#6EE7B7' : '#FF6B6B' },
+            ].map(s => (
+              <div
+                key={s.label}
+                style={{
+                  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.11)',
+                  borderRadius: 12, padding: '0.5rem 1.1rem',
+                }}
+              >
+                <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.42)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 2 }}>
+                  {s.label}
+                </div>
+                <div style={{ fontFamily: 'var(--font-syne)', fontSize: '1.2rem', fontWeight: 800, color: s.color, lineHeight: 1 }}>
+                  {s.value}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── MAIN CONTENT ── */}
+      <div className="max-w-4xl mx-auto px-6 py-8">
+
+        {/* ── Budget Overview Card ── */}
+        <div style={card}>
+          <h2 style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: '1.05rem', color: '#1A1A2E', marginBottom: '1.25rem' }}>
+            Budget Overview
+          </h2>
+
+          <div className="flex flex-col items-center" style={{ marginBottom: '1.5rem' }}>
+            {/* Ring */}
+            <div style={{ position: 'relative', width: 200, height: 200 }}>
+              <ProgressRing pct={pctSpent} />
+              <div style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span style={{ fontFamily: 'var(--font-syne)', fontSize: '1.6rem', fontWeight: 800, color: '#1A1A2E', lineHeight: 1 }}>
+                  {pctSpent}%
+                </span>
+                <span style={{ fontFamily: 'var(--font-space)', fontSize: '0.7rem', color: '#9CA3AF', marginTop: 4 }}>
+                  of budget spent
+                </span>
+                <span style={{ fontFamily: 'var(--font-syne)', fontSize: '0.95rem', fontWeight: 700, color: '#4A0E6E', marginTop: 6 }}>
+                  {formatCurrency(totalBudget)}
+                </span>
+              </div>
             </div>
-            <div
-              className="text-[42px] font-extrabold text-white leading-none tracking-[-2px]"
-              style={{ fontFamily: 'var(--font-syne)' }}
-            >
-              $6,750
-            </div>
-            <div className="text-[14px] mt-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
-              of $15,000 budget
-            </div>
-            <div
-              className="inline-flex items-center gap-1.5 rounded-[20px] px-3 py-1 mt-2"
-              style={{ background: 'rgba(13,155,106,0.2)', border: '1px solid rgba(13,155,106,0.3)' }}
-            >
-              <span className="text-sm">💚</span>
-              <span className="text-[13px] font-bold" style={{ fontFamily: 'var(--font-syne)', color: '#4ECDC4' }}>
-                $8,250 remaining
-              </span>
+
+            {/* Spent / Remaining row */}
+            <div className="flex gap-6 mt-2">
+              <div className="flex flex-col items-center">
+                <span style={{ fontFamily: 'var(--font-syne)', fontSize: '1.1rem', fontWeight: 800, color: '#C0392B' }}>
+                  {formatCurrency(totalSpent)}
+                </span>
+                <span style={{ fontFamily: 'var(--font-space)', fontSize: '0.7rem', color: '#9CA3AF', marginTop: 2 }}>Spent</span>
+              </div>
+              <div style={{ width: 1, background: 'rgba(74,14,110,0.1)', alignSelf: 'stretch' }} />
+              <div className="flex flex-col items-center">
+                <span style={{ fontFamily: 'var(--font-syne)', fontSize: '1.1rem', fontWeight: 800, color: remaining >= 0 ? '#0D9B6A' : '#C0392B' }}>
+                  {formatCurrency(Math.abs(remaining))}
+                </span>
+                <span style={{ fontFamily: 'var(--font-space)', fontSize: '0.7rem', color: '#9CA3AF', marginTop: 2 }}>
+                  {remaining >= 0 ? 'Remaining' : 'Over budget'}
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Segmented bar */}
-          <div className="relative z-[1]">
-            <div className="h-2.5 rounded-[5px] overflow-hidden flex mb-2" style={{ background: 'rgba(255,255,255,0.08)' }}>
-              {BAR_SEGMENTS.map((seg, i) => (
-                <div key={i} style={{ width: seg.width, background: seg.color, height: '100%' }} />
-              ))}
+          <div>
+            <div style={{ height: 8, background: 'rgba(74,14,110,0.07)', borderRadius: 4, overflow: 'hidden', display: 'flex', marginBottom: 10 }}>
+              {BUDGET_CATS.map(cat => {
+                const allocated = totalBudget * cat.pct / 100
+                const catActual = catSpend[cat.name] ?? 0
+                const barPct    = allocated > 0 ? Math.min((catActual / allocated) * cat.pct, cat.pct) : 0
+                return (
+                  <div
+                    key={cat.name}
+                    style={{ width: `${barPct}%`, background: cat.color, transition: 'width 0.6s ease' }}
+                  />
+                )
+              })}
             </div>
-            <div className="flex gap-2 flex-wrap">
-              {BAR_SEGMENTS.filter(s => s.label).map(seg => (
-                <div
-                  key={seg.label}
-                  className="flex items-center gap-[3px] text-[9px] font-bold"
-                  style={{ fontFamily: 'var(--font-syne)', color: 'rgba(255,255,255,0.4)' }}
-                >
-                  <div className="w-2 h-2 rounded-[2px]" style={{ background: seg.color }} />
-                  {seg.label}
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              {BUDGET_CATS.map(cat => (
+                <div key={cat.name} className="flex items-center gap-1">
+                  <div style={{ width: 8, height: 8, borderRadius: 2, background: cat.color, flexShrink: 0 }} />
+                  <span style={{ fontFamily: 'var(--font-space)', fontSize: '0.7rem', color: '#7C6B8A' }}>
+                    {cat.name}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* ── TABS ── */}
-        <div className="flex bg-white border-b border-[#F3E8FF] flex-shrink-0">
-          {([
-            { id: 'breakdown',    label: '📊 Breakdown' },
-            { id: 'transactions', label: '🧾 Transactions' },
-            { id: 'forecast',     label: '🔮 Forecast' },
-          ] as { id: Tab; label: string }[]).map(t => (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              className="flex-1 py-[11px] px-1.5 text-[11px] font-bold text-center"
-              style={{
-                fontFamily: 'var(--font-syne)',
-                color: activeTab === t.id ? '#4A0E6E' : '#7C6B8A',
-                background: 'transparent',
-                border: 'none',
-                borderBottom: activeTab === t.id ? '2px solid #4A0E6E' : '2px solid transparent',
-                transition: 'all 0.2s',
-                cursor: 'pointer',
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
+        {/* ── Category Breakdown ── */}
+        <div style={card}>
+          <h2 style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: '1.05rem', color: '#1A1A2E', marginBottom: '1.25rem' }}>
+            Category Breakdown
+          </h2>
+
+          <div className="flex flex-col gap-3">
+            {BUDGET_CATS.map(cat => {
+              const allocated = totalBudget * cat.pct / 100
+              const actual    = catSpend[cat.name] ?? 0
+              const vendor    = catVendor[cat.name]
+              const barPct    = allocated > 0 ? Math.min((actual / allocated) * 100, 100) : 0
+              const isOver    = actual > allocated && allocated > 0
+              const isOn      = actual > 0 && actual <= allocated
+              const isEmpty   = actual === 0
+
+              let statusLabel: string
+              let statusBg: string
+              let statusColor: string
+              if (isOver)       { statusLabel = 'Over budget';   statusBg = '#FDEDEC'; statusColor = '#C0392B' }
+              else if (isOn)    { statusLabel = 'Under budget';  statusBg = '#E6F7F2'; statusColor = '#0D9B6A' }
+              else              { statusLabel = 'Not spent yet'; statusBg = '#F3E8FF'; statusColor = '#7C6B8A' }
+
+              return (
+                <div
+                  key={cat.name}
+                  className="rounded-2xl p-4"
+                  style={{
+                    background: 'white',
+                    border: `1.5px solid ${isOver ? '#FDEDEC' : 'rgba(74,14,110,0.08)'}`,
+                    boxShadow: '0 1px 3px rgba(74,14,110,0.05)',
+                  }}
+                >
+                  {/* Top row */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <div style={{
+                      width: 10, height: 10, borderRadius: '50%', background: cat.color, flexShrink: 0,
+                    }} />
+                    <span style={{ fontFamily: 'var(--font-syne)', fontSize: '0.9rem', fontWeight: 700, color: '#1A1A2E', flex: 1 }}>
+                      {cat.name}
+                    </span>
+                    <div className="text-right">
+                      <div style={{ fontFamily: 'var(--font-syne)', fontSize: '0.95rem', fontWeight: 800, color: isOver ? '#C0392B' : '#1A1A2E' }}>
+                        {formatCurrency(actual)}
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-space)', fontSize: '0.68rem', color: '#9CA3AF' }}>
+                        of {formatCurrency(allocated)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div style={{ height: 5, background: 'rgba(74,14,110,0.07)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+                    <div style={{
+                      height: '100%', width: `${barPct}%`,
+                      background: isOver ? '#C0392B' : cat.color,
+                      borderRadius: 3, transition: 'width 0.6s ease',
+                    }} />
+                  </div>
+
+                  {/* Bottom row */}
+                  <div className="flex items-center justify-between gap-2">
+                    <span style={{
+                      fontFamily: 'var(--font-space)', fontSize: '0.7rem', fontWeight: 600,
+                      background: statusBg, color: statusColor,
+                      borderRadius: 100, padding: '0.18rem 0.6rem',
+                    }}>
+                      {statusLabel}
+                    </span>
+                    {vendor && (
+                      <span style={{ fontFamily: 'var(--font-space)', fontSize: '0.72rem', color: '#7C6B8A', textAlign: 'right' }}>
+                        {vendor}
+                      </span>
+                    )}
+                    {isEmpty && !vendor && (
+                      <Link
+                        href="/vendors"
+                        style={{ fontFamily: 'var(--font-space)', fontSize: '0.72rem', fontWeight: 600, color: '#4A0E6E', textDecoration: 'none' }}
+                      >
+                        Find vendors →
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
 
-        {/* ── TAB BODIES ── */}
-        <div
-          key={activeTab}
-          className="flex-1 overflow-y-auto scrollbar-hide px-5 py-3.5"
-          style={{ animation: 'fadeUp 0.3s ease both' }}
-        >
+        {/* ── Bookings List ── */}
+        {bookings.length > 0 && (
+          <div style={card}>
+            <h2 style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: '1.05rem', color: '#1A1A2E', marginBottom: '1.25rem' }}>
+              Bookings
+            </h2>
 
-          {/* ══ BREAKDOWN TAB ══ */}
-          {activeTab === 'breakdown' && (
-            <>
-              {/* AI tip */}
-              <div className="bg-[#1A1A2E] rounded-[14px] p-3.5 flex gap-2.5 mb-3.5">
-                <span className="text-[18px] flex-shrink-0">✦</span>
-                <p className="text-[12px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.65)' }}>
-                  You're <span className="font-bold" style={{ color: '#DDB8F5' }}>45% through your budget</span> with 4 vendors still unbooked. Based on your plan, you'll need ~$7,200 more. You're on track.
-                </p>
-              </div>
-
-              {/* Category rows */}
-              {CATEGORIES.map(cat => {
-                const statusStyle = STATUS_STYLES[cat.status]
+            <div className="flex flex-col gap-2">
+              {bookings.map(b => {
+                const vp     = b.vendor_profiles
+                const badge  = statusBadge(b.status)
                 return (
                   <div
-                    key={cat.name}
-                    className="bg-white rounded-[14px] p-3.5 mb-2.5 cursor-pointer"
-                    style={{
-                      boxShadow: '0 2px 8px rgba(74,14,110,0.06)',
-                      border: cat.urgentBorder ? '2px solid #C0392B' : '2px solid transparent',
-                      transition: 'all 0.2s',
-                    }}
+                    key={b.id}
+                    className="flex items-center gap-3 rounded-xl px-4 py-3"
+                    style={{ border: '1px solid rgba(74,14,110,0.09)', background: 'white' }}
                   >
-                    <div className="flex items-center gap-2.5 mb-2">
-                      <div
-                        className="w-9 h-9 rounded-[10px] flex items-center justify-center text-[18px] flex-shrink-0"
-                        style={{ background: cat.iconBg }}
-                      >
-                        {cat.icon}
-                      </div>
-                      <div
-                        className="flex-1 text-[13px] font-bold text-[#1A1A2E]"
-                        style={{ fontFamily: 'var(--font-syne)' }}
-                      >
-                        {cat.name}
-                      </div>
-                      <div className="text-right">
-                        <div
-                          className="text-[14px] font-extrabold"
-                          style={{ fontFamily: 'var(--font-syne)', color: cat.amtColor ?? '#1A1A2E' }}
-                        >
-                          {cat.spent}
-                        </div>
-                        <div className="text-[10px] text-[#7C6B8A] mt-[1px]">{cat.budget}</div>
-                      </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontFamily: 'var(--font-syne)', fontSize: '0.875rem', fontWeight: 700, color: '#1A1A2E', marginBottom: 2 }}>
+                        {vp?.business_name ?? 'Unknown vendor'}
+                      </p>
+                      <p style={{ fontFamily: 'var(--font-space)', fontSize: '0.72rem', color: '#9CA3AF' }}>
+                        {vp?.category ?? ''}{vp?.category ? ' · ' : ''}{formatDate(b.created_at)}
+                      </p>
                     </div>
-                    <div className="h-1.5 rounded-[3px] overflow-hidden mb-1.5" style={{ background: '#F3E8FF' }}>
-                      <div
-                        className="h-full rounded-[3px]"
-                        style={{ width: `${cat.barPct}%`, background: cat.barColor }}
-                      />
-                    </div>
-                    <span
-                      className="text-[10px] font-bold px-[7px] py-[2px] rounded-[5px] inline-block"
-                      style={{ fontFamily: 'var(--font-syne)', background: statusStyle.bg, color: statusStyle.color }}
-                    >
-                      {cat.statusLabel}
+
+                    <span style={{
+                      fontFamily: 'var(--font-space)', fontSize: '0.68rem', fontWeight: 600,
+                      background: badge.bg, color: badge.color,
+                      borderRadius: 100, padding: '0.18rem 0.6rem', flexShrink: 0,
+                    }}>
+                      {badge.label}
                     </span>
+
+                    {b.deposit_amount != null && (
+                      <span style={{ fontFamily: 'var(--font-syne)', fontSize: '0.9rem', fontWeight: 800, color: '#C0392B', flexShrink: 0 }}>
+                        {formatCurrency(b.deposit_amount)}
+                      </span>
+                    )}
                   </div>
                 )
               })}
-              <div className="h-3" />
-            </>
+            </div>
+          </div>
+        )}
+
+        {/* ── Manual Expenses ── */}
+        <div style={card}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: '1.05rem', color: '#1A1A2E' }}>
+              Manual Expenses
+            </h2>
+            <button
+              type="button"
+              onClick={() => setShowForm(v => !v)}
+              style={{
+                background: showForm ? 'rgba(74,14,110,0.08)' : '#4A0E6E',
+                color: showForm ? '#4A0E6E' : 'white',
+                border: showForm ? '1.5px solid rgba(74,14,110,0.2)' : 'none',
+                borderRadius: 100, padding: '0.35rem 1rem',
+                fontFamily: 'var(--font-syne)', fontSize: '0.8rem', fontWeight: 700,
+                cursor: 'pointer', transition: 'all 0.15s',
+              }}
+            >
+              {showForm ? 'Cancel' : '+ Add expense'}
+            </button>
+          </div>
+
+          {/* Add expense form */}
+          {showForm && (
+            <div
+              className="rounded-2xl p-4 mb-4 flex flex-col gap-3"
+              style={{ background: 'rgba(74,14,110,0.04)', border: '1.5px solid rgba(74,14,110,0.1)' }}
+            >
+              <div>
+                <label style={{ fontFamily: 'var(--font-space)', fontSize: '0.72rem', fontWeight: 600, color: '#7C6B8A', display: 'block', marginBottom: 4 }}>
+                  Description
+                </label>
+                <input
+                  type="text"
+                  value={formDesc}
+                  onChange={e => setFormDesc(e.target.value)}
+                  placeholder="e.g. Wedding invitations printing"
+                  style={{
+                    width: '100%', borderRadius: 10, border: '1.5px solid rgba(74,14,110,0.15)',
+                    padding: '0.55rem 0.85rem', fontFamily: 'var(--font-space)', fontSize: '0.875rem',
+                    color: '#1A1A2E', background: 'white', outline: 'none',
+                  }}
+                />
+              </div>
+              <div className="flex gap-3">
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontFamily: 'var(--font-space)', fontSize: '0.72rem', fontWeight: 600, color: '#7C6B8A', display: 'block', marginBottom: 4 }}>
+                    Amount ($)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formAmount}
+                    onChange={e => setFormAmount(e.target.value)}
+                    placeholder="0"
+                    style={{
+                      width: '100%', borderRadius: 10, border: '1.5px solid rgba(74,14,110,0.15)',
+                      padding: '0.55rem 0.85rem', fontFamily: 'var(--font-space)', fontSize: '0.875rem',
+                      color: '#1A1A2E', background: 'white', outline: 'none',
+                    }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontFamily: 'var(--font-space)', fontSize: '0.72rem', fontWeight: 600, color: '#7C6B8A', display: 'block', marginBottom: 4 }}>
+                    Category
+                  </label>
+                  <select
+                    value={formCat}
+                    onChange={e => setFormCat(e.target.value)}
+                    style={{
+                      width: '100%', borderRadius: 10, border: '1.5px solid rgba(74,14,110,0.15)',
+                      padding: '0.55rem 0.85rem', fontFamily: 'var(--font-space)', fontSize: '0.875rem',
+                      color: '#1A1A2E', background: 'white', outline: 'none', cursor: 'pointer',
+                    }}
+                  >
+                    {EXPENSE_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={addExpense}
+                style={{
+                  background: '#4A0E6E', color: 'white', borderRadius: 10,
+                  padding: '0.65rem', fontFamily: 'var(--font-syne)', fontSize: '0.875rem', fontWeight: 700,
+                  cursor: 'pointer', border: 'none', transition: 'opacity 0.15s',
+                }}
+              >
+                Save expense
+              </button>
+            </div>
           )}
 
-          {/* ══ TRANSACTIONS TAB ══ */}
-          {activeTab === 'transactions' && (
-            <>
-              <div
-                className="text-[11px] font-bold uppercase tracking-[1px] text-[#7C6B8A] mb-2.5"
-                style={{ fontFamily: 'var(--font-syne)' }}
-              >
-                June 2025
-              </div>
-              {TRANSACTIONS.map(tx => (
+          {/* Expense list */}
+          {expenses.length === 0 ? (
+            <p style={{ fontFamily: 'var(--font-space)', fontSize: '0.85rem', color: '#9CA3AF' }}>
+              No manual expenses added yet.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {expenses.map(e => (
                 <div
-                  key={tx.id}
-                  className="bg-white rounded-xl px-3.5 py-3 mb-2 flex items-center gap-3"
-                  style={{ boxShadow: '0 2px 6px rgba(74,14,110,0.05)' }}
+                  key={e.id}
+                  className="flex items-center gap-3 rounded-xl px-4 py-3"
+                  style={{ border: '1px solid rgba(74,14,110,0.09)', background: 'white' }}
                 >
-                  <div
-                    className="w-[38px] h-[38px] rounded-[10px] flex items-center justify-center text-[18px] flex-shrink-0"
-                    style={{ background: tx.iconBg }}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontFamily: 'var(--font-syne)', fontSize: '0.875rem', fontWeight: 700, color: '#1A1A2E', marginBottom: 2 }}>
+                      {e.description}
+                    </p>
+                    <p style={{ fontFamily: 'var(--font-space)', fontSize: '0.72rem', color: '#9CA3AF' }}>
+                      {e.category} · {formatDate(e.date)}
+                    </p>
+                  </div>
+                  <span style={{ fontFamily: 'var(--font-syne)', fontSize: '0.9rem', fontWeight: 800, color: '#C0392B', flexShrink: 0 }}>
+                    {formatCurrency(e.amount)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeExpense(e.id)}
+                    aria-label="Remove expense"
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      color: '#9CA3AF', fontSize: '1rem', lineHeight: 1, padding: '0 2px',
+                      flexShrink: 0,
+                    }}
                   >
-                    {tx.icon}
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-[13px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-syne)' }}>
-                      {tx.name}
-                    </div>
-                    <div className="text-[11px] text-[#7C6B8A] mt-[2px]">{tx.detail}</div>
-                  </div>
-                  <div
-                    className="text-[14px] font-extrabold"
-                    style={{ fontFamily: 'var(--font-syne)', color: tx.isCredit ? '#0D9B6A' : '#C0392B' }}
-                  >
-                    {tx.amount}
-                  </div>
+                    ×
+                  </button>
                 </div>
               ))}
-              <div className="h-3" />
-            </>
-          )}
-
-          {/* ══ FORECAST TAB ══ */}
-          {activeTab === 'forecast' && (
-            <>
-              {/* AI tip */}
-              <div className="bg-[#1A1A2E] rounded-[14px] p-3.5 flex gap-2.5 mb-3.5">
-                <span className="text-[18px] flex-shrink-0">✦</span>
-                <p className="text-[12px] leading-[1.6]" style={{ color: 'rgba(255,255,255,0.65)' }}>
-                  AI forecast based on your current bookings and remaining vendors.{' '}
-                  <span className="font-bold" style={{ color: '#DDB8F5' }}>You have $8,250 left</span> for 4 unbooked categories. You're on track to finish under budget.
-                </p>
-              </div>
-
-              {/* Upcoming payments */}
-              <div
-                className="text-[13px] font-bold text-[#1A1A2E] mb-2.5"
-                style={{ fontFamily: 'var(--font-syne)' }}
-              >
-                Upcoming Payments
-              </div>
-              <div className="flex flex-col gap-2 mb-4">
-                {UPCOMING_PAYMENTS.map(p => (
-                  <div
-                    key={p.name}
-                    className="bg-white rounded-xl px-3.5 py-3 flex items-center gap-3"
-                    style={{ boxShadow: '0 2px 6px rgba(74,14,110,0.05)' }}
-                  >
-                    <div
-                      className="w-10 h-10 rounded-[10px] flex items-center justify-center text-[18px] flex-shrink-0"
-                      style={{ background: p.iconBg }}
-                    >
-                      {p.icon}
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-[13px] font-bold text-[#1A1A2E]" style={{ fontFamily: 'var(--font-syne)' }}>
-                        {p.name}
-                      </div>
-                      <div className="text-[11px] text-[#7C6B8A] mt-[2px]">{p.due}</div>
-                    </div>
-                    <div
-                      className="text-[14px] font-extrabold"
-                      style={{ fontFamily: 'var(--font-syne)', color: p.amtColor }}
-                    >
-                      {p.amount}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* On budget banner */}
-              <div className="rounded-[14px] p-3.5 flex gap-2.5" style={{ background: '#E6F7F2' }}>
-                <span className="text-[20px] flex-shrink-0">💚</span>
-                <div>
-                  <div
-                    className="text-[13px] font-bold mb-1"
-                    style={{ fontFamily: 'var(--font-syne)', color: '#0D9B6A' }}
-                  >
-                    You're On Budget
-                  </div>
-                  <div className="text-[12px] leading-[1.6]" style={{ color: '#0D9B6A', opacity: 0.8 }}>
-                    After all projected payments, you'll have ~$1,200 reserve remaining. AI recommends keeping at least $800 for day-of surprises.
-                  </div>
-                </div>
-              </div>
-              <div className="h-3" />
-            </>
-          )}
-        </div>
-
-        {/* ── BOTTOM NAV ── */}
-        <div className="flex bg-white border-t border-[#F3E8FF] pt-2.5 pb-4 flex-shrink-0">
-          {[
-            { icon: '🏠', label: 'Home',     active: false },
-            { icon: '🔍', label: 'Vendors',  active: false },
-            { icon: '📋', label: 'My Event', active: true  },
-            { icon: '💬', label: 'Messages', active: false },
-            { icon: '👤', label: 'Profile',  active: false },
-          ].map(n => (
-            <div key={n.label} className="flex-1 flex flex-col items-center gap-[3px] cursor-pointer py-1.5">
-              <span className="text-[20px]">{n.icon}</span>
-              <span
-                className="text-[10px] font-bold"
-                style={{ fontFamily: 'var(--font-syne)', color: n.active ? '#4A0E6E' : '#7C6B8A' }}
-              >
-                {n.label}
-              </span>
             </div>
-          ))}
+          )}
         </div>
+
       </div>
     </div>
   )
