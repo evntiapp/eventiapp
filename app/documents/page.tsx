@@ -28,7 +28,7 @@ export const dynamic = 'force-dynamic'
 //   USING (auth.uid() = client_id)
 //   WITH CHECK (auth.uid() = client_id);
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import type { DragEvent } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -198,7 +198,7 @@ function TypeBadge({ type }: { type: string }) {
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-export default function DocumentsPage() {
+function DocumentsInner() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const eventId      = searchParams.get('eventId')
@@ -863,4 +863,8 @@ export default function DocumentsPage() {
 
     </div>
   )
+}
+
+export default function DocumentsPage() {
+  return <Suspense><DocumentsInner /></Suspense>
 }

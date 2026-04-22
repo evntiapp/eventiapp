@@ -1,7 +1,7 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
@@ -137,7 +137,7 @@ function statusBadge(bookingStatus: string): { label: string; bg: string; color:
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-export default function BudgetPage() {
+function BudgetInner() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const eventId      = searchParams.get('eventId')
@@ -723,4 +723,8 @@ export default function BudgetPage() {
       </div>
     </div>
   )
+}
+
+export default function BudgetPage() {
+  return <Suspense><BudgetInner /></Suspense>
 }

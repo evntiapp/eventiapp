@@ -1,7 +1,7 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
@@ -178,7 +178,7 @@ function DragHandle() {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default function SchedulePage() {
+function ScheduleInner() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const eventId      = searchParams.get('eventId')
@@ -790,4 +790,8 @@ export default function SchedulePage() {
       )}
     </div>
   )
+}
+
+export default function SchedulePage() {
+  return <Suspense><ScheduleInner /></Suspense>
 }

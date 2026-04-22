@@ -53,7 +53,7 @@ export const dynamic = 'force-dynamic'
   -- alter table bookings add column if not exists client_id uuid references auth.users(id);
 */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
@@ -154,7 +154,7 @@ function Skeleton() {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default function MessagesPage() {
+function MessagesInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const initialBookingId = searchParams.get('bookingId')
@@ -610,4 +610,8 @@ export default function MessagesPage() {
       </div>
     </div>
   )
+}
+
+export default function MessagesPage() {
+  return <Suspense><MessagesInner /></Suspense>
 }

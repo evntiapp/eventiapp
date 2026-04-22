@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic'
 //   created_at timestamp with time zone default now()
 // );
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
@@ -151,7 +151,7 @@ function RsvpBadge({ status }: { status: string }) {
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-export default function GuestsPage() {
+function GuestsInner() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const eventId      = searchParams.get('eventId')
@@ -925,4 +925,8 @@ export default function GuestsPage() {
 
     </div>
   )
+}
+
+export default function GuestsPage() {
+  return <Suspense><GuestsInner /></Suspense>
 }

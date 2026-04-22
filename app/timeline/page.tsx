@@ -1,6 +1,6 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
@@ -167,7 +167,7 @@ function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: ()
 
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-export default function TimelinePage() {
+function TimelineInner() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const eventId      = searchParams.get('eventId')
@@ -633,4 +633,8 @@ export default function TimelinePage() {
       </div>
     </div>
   )
+}
+
+export default function TimelinePage() {
+  return <Suspense><TimelineInner /></Suspense>
 }
