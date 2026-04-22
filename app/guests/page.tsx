@@ -1,4 +1,5 @@
 'use client'
+export const dynamic = 'force-dynamic'
 
 // -- Run in Supabase SQL editor before using this page --
 // CREATE TABLE public.guests (

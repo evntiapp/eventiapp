@@ -1,4 +1,5 @@
 'use client'
+export const dynamic = 'force-dynamic'
 
 /*
   SQL — run once in Supabase SQL editor
