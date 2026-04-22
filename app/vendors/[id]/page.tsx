@@ -24,7 +24,6 @@ interface VendorProfile {
   id: string
   business_name: string
   contact_name: string
-
   phone: string
   location: string
   category: string
@@ -37,6 +36,8 @@ interface VendorProfile {
   application_status: string
   rating_average?: number | null
   review_count?: number | null
+  photos?: string[] | null
+  services_offered?: string[] | null
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -386,7 +387,7 @@ export default function VendorProfilePage() {
 
             <div className="h-px bg-[#DDB8F5]" />
 
-            {/* Portfolio placeholder */}
+            {/* Portfolio */}
             <section>
               <h2
                 className="text-lg font-bold text-[#1A1A2E] mb-4"
@@ -409,23 +410,80 @@ export default function VendorProfilePage() {
                 </a>
               ) : null}
 
-              <div className="grid grid-cols-3 gap-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-40 rounded-2xl flex items-center justify-center"
-                    style={{ background: '#EDE5F7', border: '1.5px dashed #DDB8F5' }}
-                  >
-                    <span
-                      className="text-xs text-[#7C6B8A] text-center px-2 leading-relaxed"
-                      style={{ fontFamily: 'var(--font-space-vp)' }}
+              {vendor.photos && vendor.photos.length > 0 ? (
+                <div className="grid grid-cols-3 gap-3">
+                  {vendor.photos.map((url, i) => (
+                    <a
+                      key={i}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group relative h-40 rounded-2xl overflow-hidden block"
+                      style={{ background: '#EDE5F7' }}
+                      aria-label={`Portfolio photo ${i + 1}`}
                     >
-                      Photos<br />coming soon
-                    </span>
-                  </div>
-                ))}
-              </div>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt={`${vendor.business_name} portfolio ${i + 1}`}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <div
+                        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ background: 'rgba(74,14,110,0.35)' }}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                          <path d="M3 17L17 3M17 3H9M17 3v8" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="h-40 rounded-2xl flex items-center justify-center"
+                      style={{ background: '#EDE5F7', border: '1.5px dashed #DDB8F5' }}
+                    >
+                      <span
+                        className="text-xs text-[#7C6B8A] text-center px-2 leading-relaxed"
+                        style={{ fontFamily: 'var(--font-space-vp)' }}
+                      >
+                        Photos<br />coming soon
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
+
+            {/* Services offered */}
+            {vendor.services_offered && vendor.services_offered.length > 0 && (
+              <>
+                <div className="h-px bg-[#DDB8F5]" />
+                <section>
+                  <h2
+                    className="text-lg font-bold text-[#1A1A2E] mb-4"
+                    style={{ fontFamily: 'var(--font-syne-vp)' }}
+                  >
+                    Services
+                  </h2>
+                  <div className="flex flex-wrap gap-2">
+                    {vendor.services_offered.map(svc => (
+                      <span
+                        key={svc}
+                        className="px-3.5 py-2 rounded-full text-xs font-semibold"
+                        style={{ background: '#F3E8FF', color: '#4A0E6E', fontFamily: 'var(--font-space-vp)', border: '1px solid #DDB8F5' }}
+                      >
+                        {svc}
+                      </span>
+                    ))}
+                  </div>
+                </section>
+              </>
+            )}
           </div>
 
           {/* ── RIGHT COLUMN (sticky card) ── */}
