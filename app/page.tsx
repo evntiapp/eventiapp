@@ -2,10 +2,14 @@
 import { useState, useEffect } from 'react'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { createClient } from '@supabase/supabase-js'
+import { getSupabaseClient } from '@/lib/supabase'
 import Image from 'next/image'
 import {
   Wand2, Cpu, ShieldCheck, Clock,
   Check, Plus, TrendingUp, Star,
+  Calendar, Search, Sparkles, Tag,
+  Store, LayoutDashboard, Info, FileText,
+  ChevronDown, X, Menu,
 } from 'lucide-react'
 
 const syne = Syne({
@@ -100,13 +104,24 @@ export default function HomePage() {
   const [heroFocused, setHF]      = useState(false)
   const [cta, setCta]             = useState<FormState>(INIT_FORM)
   const [ctaFocused, setCF]       = useState(false)
-  const [openFaq, setOpenFaq]     = useState<number | null>(0)
+  const [openFaq, setOpenFaq]               = useState<number | null>(0)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [openDropdown, setOpenDropdown]     = useState<'clients' | 'vendors' | null>(null)
+  const [isLoggedIn, setIsLoggedIn]         = useState(false)
+  const [isVendor, setIsVendor]             = useState(false)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setIsLoggedIn(!!user)
+    const sb = getSupabaseClient()
+    sb.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      setIsLoggedIn(true)
+      const { data: vp } = await sb
+        .from('vendor_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('application_status', 'approved')
+        .single()
+      setIsVendor(!!vp)
     })
   }, [])
 
@@ -131,6 +146,8 @@ export default function HomePage() {
     set(s => ({ ...s, submitted: true }))
   }
 
+  const logoHref = isLoggedIn ? (isVendor ? '/vendor/dashboard' : '/dashboard') : '/'
+
   return (
     <div
       className={`${syne.variable} ${spaceGrotesk.variable}`}
@@ -139,166 +156,351 @@ export default function HomePage() {
 
       {/* ── 1. NAV ─────────────────────────────────────────────────────────── */}
       <nav
-        className="flex items-center justify-between px-8 md:px-14 py-[1.125rem]"
         style={{
-          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-          background: 'rgba(250,250,250,0.88)',
-          backdropFilter: 'blur(16px)',
-          borderBottom: '1px solid rgba(74,14,110,0.07)',
+          position: 'sticky', top: 0, zIndex: 50,
+          height: 64, background: 'white',
+          borderBottom: '1px solid rgba(74,14,110,0.08)',
         }}
       >
-        <a href="/" style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: '1.6rem', letterSpacing: '-0.03em', color: 'var(--plum)', textDecoration: 'none' }}>
-          evnti<span style={{ color: 'var(--lavender)' }}>.</span>
-        </a>
-
-        <div className="hidden md:flex items-center gap-8">
-          <a
-            href="#how-it-works"
-            onClick={e => { e.preventDefault(); document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }) }}
-            style={{ fontSize: '0.875rem', fontWeight: 400, color: 'var(--muted)', textDecoration: 'none', transition: 'color 0.2s', cursor: 'pointer' }}
-            onMouseOver={e => (e.currentTarget.style.color = 'var(--plum)')}
-            onMouseOut={e => (e.currentTarget.style.color = 'var(--muted)')}
-          >How it works</a>
-          <a
-            href="#faq"
-            onClick={e => { e.preventDefault(); document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' }) }}
-            style={{ fontSize: '0.875rem', fontWeight: 400, color: 'var(--muted)', textDecoration: 'none', transition: 'color 0.2s', cursor: 'pointer' }}
-            onMouseOver={e => (e.currentTarget.style.color = 'var(--plum)')}
-            onMouseOut={e => (e.currentTarget.style.color = 'var(--muted)')}
-          >Pricing</a>
-          <a
-            href="/vendor/apply"
-            style={{ fontSize: '0.875rem', fontWeight: 400, color: 'var(--muted)', textDecoration: 'none', transition: 'color 0.2s' }}
-            onMouseOver={e => (e.currentTarget.style.color = 'var(--plum)')}
-            onMouseOut={e => (e.currentTarget.style.color = 'var(--muted)')}
-          >For vendors</a>
-          <a
-            href="/auth/signin"
-            style={{ fontSize: '0.875rem', fontWeight: 400, color: 'var(--muted)', textDecoration: 'none', transition: 'color 0.2s' }}
-            onMouseOver={e => (e.currentTarget.style.color = 'var(--plum)')}
-            onMouseOut={e => (e.currentTarget.style.color = 'var(--muted)')}
-          >Sign in</a>
-        </div>
-
-        {isLoggedIn ? (
-          <a
-            href="/dashboard"
-            className="hidden md:inline-block"
-            style={{
-              background: 'var(--plum)', color: 'var(--off-white)',
-              borderRadius: '100px', padding: '0.6rem 1.4rem',
-              fontFamily: 'var(--font-space)', fontSize: '0.85rem', fontWeight: 500,
-              textDecoration: 'none', transition: 'background 0.2s',
-            }}
-            onMouseOver={e => (e.currentTarget.style.background = 'var(--plum-mid)')}
-            onMouseOut={e => (e.currentTarget.style.background = 'var(--plum)')}
-          >
-            Dashboard
-          </a>
-        ) : (
-          <button
-            className="hidden md:inline-block border-none cursor-pointer"
-            style={{
-              background: 'var(--plum)', color: 'var(--off-white)',
-              borderRadius: '100px', padding: '0.6rem 1.4rem',
-              fontFamily: 'var(--font-space)', fontSize: '0.85rem', fontWeight: 500,
-              transition: 'background 0.2s',
-            }}
-            onClick={() => document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' })}
-            onMouseOver={e => (e.currentTarget.style.background = 'var(--plum-mid)')}
-            onMouseOut={e => (e.currentTarget.style.background = 'var(--plum)')}
-          >
-            Join waitlist
-          </button>
-        )}
-
-        {/* Mobile hamburger */}
-        <button
-          className="md:hidden border-none cursor-pointer flex flex-col justify-center items-center gap-[5px]"
-          style={{ background: 'none', padding: '0.25rem', width: 36, height: 36 }}
-          onClick={() => setMobileMenuOpen(o => !o)}
-          aria-label="Toggle menu"
-        >
-          <span style={{ display: 'block', width: 22, height: 2, background: 'var(--plum)', borderRadius: 2, transition: 'all 0.2s', transform: mobileMenuOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none' }} />
-          <span style={{ display: 'block', width: 22, height: 2, background: 'var(--plum)', borderRadius: 2, transition: 'all 0.2s', opacity: mobileMenuOpen ? 0 : 1 }} />
-          <span style={{ display: 'block', width: 22, height: 2, background: 'var(--plum)', borderRadius: 2, transition: 'all 0.2s', transform: mobileMenuOpen ? 'rotate(-45deg) translate(5px, -5px)' : 'none' }} />
-        </button>
-      </nav>
-
-      {/* Mobile dropdown menu */}
-      {mobileMenuOpen && (
         <div
-          className="md:hidden flex flex-col"
-          style={{
-            position: 'fixed', top: '3.5rem', left: 0, right: 0, zIndex: 99,
-            background: 'white',
-            borderBottom: '1px solid rgba(74,14,110,0.08)',
-            boxShadow: '0 8px 24px rgba(74,14,110,0.1)',
-          }}
+          className="flex items-center justify-between h-full px-5 md:px-10"
+          style={{ maxWidth: 1200, margin: '0 auto' }}
         >
-          {[
-            { label: 'How it works', action: () => { setMobileMenuOpen(false); document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }) } },
-            { label: 'Pricing',      action: () => { setMobileMenuOpen(false); document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' }) } },
-            { label: 'For vendors',  href: '/vendor/apply' },
-            { label: 'Sign in',      href: '/auth/signin' },
-          ].map(item => (
-            item.href ? (
-              <a
-                key={item.label}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                style={{
-                  display: 'block', padding: '1rem 1.5rem',
-                  fontFamily: 'var(--font-space)', fontSize: '0.95rem', fontWeight: 500,
-                  color: 'var(--charcoal)', textDecoration: 'none',
-                  borderBottom: '1px solid rgba(74,14,110,0.05)',
-                }}
-              >
-                {item.label}
-              </a>
-            ) : (
+          {/* Logo */}
+          <a
+            href={logoHref}
+            style={{
+              fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: '1.45rem',
+              letterSpacing: '-0.03em', color: '#4A0E6E', textDecoration: 'none', flexShrink: 0,
+            }}
+          >
+            evnti<span style={{ color: '#DDB8F5' }}>.</span>
+          </a>
+
+          {/* ── Desktop center ── */}
+          <div className="hidden md:flex items-center gap-1">
+
+            {/* For Clients */}
+            <div
+              className="relative"
+              onMouseEnter={() => setOpenDropdown('clients')}
+              onMouseLeave={() => setOpenDropdown(null)}
+            >
               <button
-                key={item.label}
-                onClick={item.action}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13.5px] font-medium transition-colors hover:bg-[#F8F4FC]"
                 style={{
-                  display: 'block', width: '100%', textAlign: 'left',
-                  padding: '1rem 1.5rem', background: 'none', border: 'none',
-                  fontFamily: 'var(--font-space)', fontSize: '0.95rem', fontWeight: 500,
-                  color: 'var(--charcoal)', cursor: 'pointer',
-                  borderBottom: '1px solid rgba(74,14,110,0.05)',
+                  fontFamily: 'var(--font-space)', border: 'none', background: 'none', cursor: 'pointer',
+                  color: openDropdown === 'clients' ? '#4A0E6E' : '#1A1A2E',
                 }}
               >
-                {item.label}
+                For Clients
+                <ChevronDown
+                  size={14}
+                  style={{ color: '#7C6B8A', transition: 'transform 0.18s', transform: openDropdown === 'clients' ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                />
               </button>
-            )
-          ))}
-          <div style={{ padding: '1rem 1.5rem' }}>
+
+              {/* Clients dropdown panel — always rendered, toggled via opacity */}
+              <div
+                style={{
+                  position: 'absolute', top: 'calc(100% + 6px)', left: 0,
+                  minWidth: 272, background: 'white', borderRadius: 12,
+                  boxShadow: '0 8px 32px rgba(74,14,110,0.12)',
+                  border: '1px solid rgba(74,14,110,0.07)',
+                  opacity: openDropdown === 'clients' ? 1 : 0,
+                  transform: openDropdown === 'clients' ? 'translateY(0)' : 'translateY(-6px)',
+                  pointerEvents: openDropdown === 'clients' ? 'auto' : 'none',
+                  transition: 'opacity 0.16s ease, transform 0.16s ease',
+                  zIndex: 60, overflow: 'hidden',
+                }}
+              >
+                <p
+                  className="px-4 pt-3 pb-2 text-[10px] font-semibold uppercase tracking-widest"
+                  style={{ color: '#7C6B8A', fontFamily: 'var(--font-space)', borderBottom: '1px solid #F3E8FF' }}
+                >
+                  For Clients
+                </p>
+                {([
+                  { icon: <Calendar size={14} />, label: 'Plan an event',   desc: 'Start planning in 5 minutes',        href: '/onboarding' },
+                  { icon: <Search   size={14} />, label: 'Browse vendors',  desc: 'Find verified Houston vendors',       href: '/vendors' },
+                  { icon: <Sparkles size={14} />, label: 'Ask Eve',         desc: 'AI-powered planning assistant',       href: '/ai-plan' },
+                  { icon: <Tag      size={14} />, label: 'Pricing',         desc: 'Free to use, pay only when you book', action: () => { setOpenDropdown(null); document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' }) } },
+                ] as { icon: React.ReactNode; label: string; desc: string; href?: string; action?: () => void }[]).map(item => {
+                  const row = (
+                    <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#F8F4FC] transition-colors cursor-pointer">
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#F3E8FF', color: '#4A0E6E' }}>{item.icon}</div>
+                      <div>
+                        <p className="text-[13px] font-semibold text-[#1A1A2E] leading-tight m-0" style={{ fontFamily: 'var(--font-syne)' }}>{item.label}</p>
+                        <p className="text-[11px] text-[#7C6B8A] leading-snug m-0" style={{ fontFamily: 'var(--font-space)' }}>{item.desc}</p>
+                      </div>
+                    </div>
+                  )
+                  return item.href
+                    ? <a key={item.label} href={item.href} style={{ textDecoration: 'none', display: 'block' }}>{row}</a>
+                    : <button key={item.label} onClick={item.action} style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>{row}</button>
+                })}
+                <div style={{ height: 6 }} />
+              </div>
+            </div>
+
+            {/* For Vendors */}
+            <div
+              className="relative"
+              onMouseEnter={() => setOpenDropdown('vendors')}
+              onMouseLeave={() => setOpenDropdown(null)}
+            >
+              <button
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13.5px] font-medium transition-colors hover:bg-[#F8F4FC]"
+                style={{
+                  fontFamily: 'var(--font-space)', border: 'none', background: 'none', cursor: 'pointer',
+                  color: openDropdown === 'vendors' ? '#4A0E6E' : '#1A1A2E',
+                }}
+              >
+                For Vendors
+                <ChevronDown
+                  size={14}
+                  style={{ color: '#7C6B8A', transition: 'transform 0.18s', transform: openDropdown === 'vendors' ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                />
+              </button>
+
+              <div
+                style={{
+                  position: 'absolute', top: 'calc(100% + 6px)', left: 0,
+                  minWidth: 272, background: 'white', borderRadius: 12,
+                  boxShadow: '0 8px 32px rgba(74,14,110,0.12)',
+                  border: '1px solid rgba(74,14,110,0.07)',
+                  opacity: openDropdown === 'vendors' ? 1 : 0,
+                  transform: openDropdown === 'vendors' ? 'translateY(0)' : 'translateY(-6px)',
+                  pointerEvents: openDropdown === 'vendors' ? 'auto' : 'none',
+                  transition: 'opacity 0.16s ease, transform 0.16s ease',
+                  zIndex: 60, overflow: 'hidden',
+                }}
+              >
+                <p
+                  className="px-4 pt-3 pb-2 text-[10px] font-semibold uppercase tracking-widest"
+                  style={{ color: '#7C6B8A', fontFamily: 'var(--font-space)', borderBottom: '1px solid #F3E8FF' }}
+                >
+                  For Vendors
+                </p>
+                {([
+                  { icon: <Store           size={14} />, label: 'Apply as a vendor', desc: 'Join the marketplace for free',       href: '/vendor/apply' },
+                  { icon: <LayoutDashboard size={14} />, label: 'Vendor dashboard',  desc: 'Manage bookings and profile',          href: '/vendor/dashboard' },
+                  { icon: <Info            size={14} />, label: 'How it works',      desc: 'See how evnti works for vendors',      action: () => { setOpenDropdown(null); document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }) } },
+                  { icon: <FileText        size={14} />, label: 'Vendor terms',      desc: 'Read our vendor agreement',            href: '/vendor-terms' },
+                ] as { icon: React.ReactNode; label: string; desc: string; href?: string; action?: () => void }[]).map(item => {
+                  const row = (
+                    <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#F8F4FC] transition-colors cursor-pointer">
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#F3E8FF', color: '#4A0E6E' }}>{item.icon}</div>
+                      <div>
+                        <p className="text-[13px] font-semibold text-[#1A1A2E] leading-tight m-0" style={{ fontFamily: 'var(--font-syne)' }}>{item.label}</p>
+                        <p className="text-[11px] text-[#7C6B8A] leading-snug m-0" style={{ fontFamily: 'var(--font-space)' }}>{item.desc}</p>
+                      </div>
+                    </div>
+                  )
+                  return item.href
+                    ? <a key={item.label} href={item.href} style={{ textDecoration: 'none', display: 'block' }}>{row}</a>
+                    : <button key={item.label} onClick={item.action} style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>{row}</button>
+                })}
+                <div style={{ height: 6 }} />
+              </div>
+            </div>
+
+            {/* How it works */}
+            <button
+              onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+              className="px-3.5 py-2 rounded-lg text-[13.5px] font-medium transition-colors hover:bg-[#F8F4FC]"
+              style={{ fontFamily: 'var(--font-space)', border: 'none', background: 'none', cursor: 'pointer', color: '#1A1A2E' }}
+            >
+              How it works
+            </button>
+          </div>
+
+          {/* ── Desktop right ── */}
+          <div className="hidden md:flex items-center gap-3 flex-shrink-0">
             {isLoggedIn ? (
               <a
-                href="/dashboard"
-                onClick={() => setMobileMenuOpen(false)}
+                href={isVendor ? '/vendor/dashboard' : '/dashboard'}
                 style={{
-                  display: 'block', width: '100%', padding: '0.75rem', borderRadius: 10,
-                  background: 'var(--plum)', color: 'white', textAlign: 'center',
-                  fontFamily: 'var(--font-syne)', fontSize: '0.9rem', fontWeight: 700,
-                  textDecoration: 'none',
+                  background: '#4A0E6E', color: 'white',
+                  borderRadius: 100, padding: '0.5rem 1.2rem',
+                  fontFamily: 'var(--font-space)', fontSize: '0.85rem', fontWeight: 600,
+                  textDecoration: 'none', transition: 'background 0.2s', whiteSpace: 'nowrap',
                 }}
+                onMouseOver={e => (e.currentTarget.style.background = '#6B1F9A')}
+                onMouseOut={e => (e.currentTarget.style.background = '#4A0E6E')}
               >
-                Go to Dashboard
+                My Dashboard
               </a>
             ) : (
-              <button
-                onClick={() => { setMobileMenuOpen(false); document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' }) }}
-                style={{
-                  width: '100%', padding: '0.75rem', borderRadius: 10, border: 'none',
-                  background: 'var(--plum)', color: 'white',
-                  fontFamily: 'var(--font-syne)', fontSize: '0.9rem', fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                Join waitlist
-              </button>
+              <>
+                <a
+                  href="/auth/signin"
+                  style={{
+                    fontSize: '0.85rem', fontWeight: 500, color: '#1A1A2E',
+                    textDecoration: 'none', fontFamily: 'var(--font-space)',
+                    border: '1.5px solid rgba(74,14,110,0.18)', borderRadius: 100,
+                    padding: '0.48rem 1.1rem', transition: 'border-color 0.2s, color 0.2s',
+                  }}
+                  onMouseOver={e => { e.currentTarget.style.borderColor = '#4A0E6E'; e.currentTarget.style.color = '#4A0E6E' }}
+                  onMouseOut={e => { e.currentTarget.style.borderColor = 'rgba(74,14,110,0.18)'; e.currentTarget.style.color = '#1A1A2E' }}
+                >
+                  Sign in
+                </a>
+                <a
+                  href="/onboarding"
+                  style={{
+                    background: '#4A0E6E', color: 'white',
+                    borderRadius: 100, padding: '0.5rem 1.2rem',
+                    fontFamily: 'var(--font-space)', fontSize: '0.85rem', fontWeight: 600,
+                    textDecoration: 'none', transition: 'background 0.2s', whiteSpace: 'nowrap',
+                  }}
+                  onMouseOver={e => (e.currentTarget.style.background = '#6B1F9A')}
+                  onMouseOut={e => (e.currentTarget.style.background = '#4A0E6E')}
+                >
+                  Get started free
+                </a>
+              </>
             )}
+          </div>
+
+          {/* ── Mobile hamburger ── */}
+          <button
+            className="md:hidden flex items-center justify-center"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#4A0E6E' }}
+            onClick={() => setMobileMenuOpen(o => !o)}
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
+      </nav>
+
+      {/* ── Mobile full-screen overlay ── */}
+      {mobileMenuOpen && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 999,
+            background: 'white', overflowY: 'auto',
+            display: 'flex', flexDirection: 'column',
+          }}
+        >
+          {/* Header */}
+          <div
+            className="flex items-center justify-between px-5 flex-shrink-0"
+            style={{ height: 64, borderBottom: '1px solid rgba(74,14,110,0.08)' }}
+          >
+            <a
+              href={logoHref}
+              style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: '1.45rem', letterSpacing: '-0.03em', color: '#4A0E6E', textDecoration: 'none' }}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              evnti<span style={{ color: '#DDB8F5' }}>.</span>
+            </a>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#4A0E6E' }}
+              aria-label="Close menu"
+            >
+              <X size={22} />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 px-5 py-6 flex flex-col gap-7">
+
+            {/* For Clients section */}
+            <div>
+              <p
+                className="text-[10px] font-semibold uppercase tracking-widest mb-2"
+                style={{ color: '#4A0E6E', fontFamily: 'var(--font-space)' }}
+              >
+                For Clients
+              </p>
+              {([
+                { icon: <Calendar size={15} />, label: 'Plan an event',   desc: 'Start planning in 5 minutes',        href: '/onboarding' },
+                { icon: <Search   size={15} />, label: 'Browse vendors',  desc: 'Find verified Houston vendors',       href: '/vendors' },
+                { icon: <Sparkles size={15} />, label: 'Ask Eve',         desc: 'AI-powered planning assistant',       href: '/ai-plan' },
+                { icon: <Tag      size={15} />, label: 'Pricing',         desc: 'Free to use, pay only when you book', action: () => { setMobileMenuOpen(false); setTimeout(() => document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' }), 80) } },
+              ] as { icon: React.ReactNode; label: string; desc: string; href?: string; action?: () => void }[]).map(item => {
+                const row = (
+                  <div className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-[#F8F4FC] transition-colors">
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#F3E8FF', color: '#4A0E6E' }}>{item.icon}</div>
+                    <div>
+                      <p className="text-sm font-semibold text-[#1A1A2E] leading-tight m-0" style={{ fontFamily: 'var(--font-syne)' }}>{item.label}</p>
+                      <p className="text-xs text-[#7C6B8A] m-0" style={{ fontFamily: 'var(--font-space)' }}>{item.desc}</p>
+                    </div>
+                  </div>
+                )
+                return item.href
+                  ? <a key={item.label} href={item.href} onClick={() => setMobileMenuOpen(false)} style={{ textDecoration: 'none', display: 'block' }}>{row}</a>
+                  : <button key={item.label} onClick={item.action} style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>{row}</button>
+              })}
+            </div>
+
+            {/* For Vendors section */}
+            <div>
+              <p
+                className="text-[10px] font-semibold uppercase tracking-widest mb-2"
+                style={{ color: '#4A0E6E', fontFamily: 'var(--font-space)' }}
+              >
+                For Vendors
+              </p>
+              {([
+                { icon: <Store           size={15} />, label: 'Apply as a vendor', desc: 'Join the marketplace for free',     href: '/vendor/apply' },
+                { icon: <LayoutDashboard size={15} />, label: 'Vendor dashboard',  desc: 'Manage bookings and profile',        href: '/vendor/dashboard' },
+                { icon: <Info            size={15} />, label: 'How it works',      desc: 'See how evnti works for vendors',    action: () => { setMobileMenuOpen(false); setTimeout(() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' }), 80) } },
+                { icon: <FileText        size={15} />, label: 'Vendor terms',      desc: 'Read our vendor agreement',          href: '/vendor-terms' },
+              ] as { icon: React.ReactNode; label: string; desc: string; href?: string; action?: () => void }[]).map(item => {
+                const row = (
+                  <div className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-[#F8F4FC] transition-colors">
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#F3E8FF', color: '#4A0E6E' }}>{item.icon}</div>
+                    <div>
+                      <p className="text-sm font-semibold text-[#1A1A2E] leading-tight m-0" style={{ fontFamily: 'var(--font-syne)' }}>{item.label}</p>
+                      <p className="text-xs text-[#7C6B8A] m-0" style={{ fontFamily: 'var(--font-space)' }}>{item.desc}</p>
+                    </div>
+                  </div>
+                )
+                return item.href
+                  ? <a key={item.label} href={item.href} onClick={() => setMobileMenuOpen(false)} style={{ textDecoration: 'none', display: 'block' }}>{row}</a>
+                  : <button key={item.label} onClick={item.action} style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}>{row}</button>
+              })}
+            </div>
+
+            {/* Bottom CTAs */}
+            <div className="flex flex-col gap-2.5 mt-auto pt-4" style={{ borderTop: '1px solid rgba(74,14,110,0.08)' }}>
+              {isLoggedIn ? (
+                <a
+                  href={isVendor ? '/vendor/dashboard' : '/dashboard'}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-center py-3.5 rounded-xl font-bold text-white text-sm"
+                  style={{ background: '#4A0E6E', fontFamily: 'var(--font-syne)', textDecoration: 'none' }}
+                >
+                  My Dashboard
+                </a>
+              ) : (
+                <>
+                  <a
+                    href="/auth/signin"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block text-center py-3.5 rounded-xl text-sm font-semibold"
+                    style={{
+                      fontFamily: 'var(--font-space)', textDecoration: 'none', color: '#4A0E6E',
+                      border: '1.5px solid rgba(74,14,110,0.25)',
+                    }}
+                  >
+                    Sign in
+                  </a>
+                  <a
+                    href="/onboarding"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block text-center py-3.5 rounded-xl font-bold text-white text-sm"
+                    style={{ background: '#4A0E6E', fontFamily: 'var(--font-syne)', textDecoration: 'none' }}
+                  >
+                    Get started free
+                  </a>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Syne, Space_Grotesk, Cormorant_Garamond } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
+import { useLogoHref } from '@/app/hooks/useLogoHref'
 import {
   Gem, Cake, Building2, Users, Heart, GraduationCap, Star, Sparkles,
   Leaf, Crown,
@@ -379,6 +380,7 @@ function ReviewPanel({
 // ── Page component ────────────────────────────────────────────────────────────
 
 export default function OnboardingPage() {
+  const logoHref = useLogoHref()
   const router = useRouter()
 
   const [screen, setScreen]                     = useState(0)
@@ -481,7 +483,7 @@ export default function OnboardingPage() {
             }} />
 
             {/* Logo — top left */}
-            <a href="/" style={{
+            <a href={logoHref} style={{
               position: 'absolute', top: 20, left: 24,
               zIndex: 2, textDecoration: 'none',
             }}>

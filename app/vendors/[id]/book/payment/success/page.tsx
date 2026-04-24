@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
+import { useLogoHref } from '@/app/hooks/useLogoHref'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -20,6 +21,7 @@ const spaceGrotesk = Space_Grotesk({
 // ── Inner component — uses useSearchParams, must be inside Suspense ───────────
 
 function SuccessContent() {
+  const logoHref = useLogoHref()
   const searchParams = useSearchParams()
   const bookingId = searchParams.get('bookingId') ?? ''
   const paymentIntent = searchParams.get('payment_intent') ?? ''
@@ -129,7 +131,7 @@ export default function PaymentSuccessPage() {
       <nav className="px-6 h-16 flex items-center border-b border-[#EDE5F7] bg-[#F8F4FC] flex-shrink-0">
         <div className="max-w-sm mx-auto w-full">
           <Link
-            href="/"
+            href={logoHref}
             className="text-xl font-extrabold tracking-tight text-[#4A0E6E] hover:opacity-80 transition-opacity"
             style={{ fontFamily: 'var(--font-syne-ps)' }}
           >

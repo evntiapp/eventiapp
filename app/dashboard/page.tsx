@@ -38,6 +38,7 @@ interface Booking {
   event_type: string | null
   event_date: string | null
   deposit_amount: number | null
+  budget_for_vendor: number | null
   status: string
   created_at: string
   vendor_profiles: {
@@ -179,7 +180,7 @@ export default function ClientDashboardPage() {
     const [{ data: bookingData }, { data: eventData }, { data: userData }] = await Promise.all([
       supabase
         .from('bookings')
-        .select('id, vendor_id, event_type, event_date, deposit_amount, status, created_at, vendor_profiles(business_name, category)')
+        .select('id, vendor_id, event_type, event_date, deposit_amount, budget_for_vendor, status, created_at, vendor_profiles(business_name, category)')
         .eq('client_email', user.email)
         .order('created_at', { ascending: false }),
       supabase
@@ -238,7 +239,7 @@ export default function ClientDashboardPage() {
       <nav className="bg-[#1A1A2E]">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <Link
-            href="/"
+            href="/dashboard"
             className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity flex-shrink-0"
             style={{ fontFamily: 'var(--font-syne-cd)' }}
           >
@@ -601,18 +602,22 @@ export default function ClientDashboardPage() {
 
                       {/* Actions */}
                       <div className="flex flex-wrap items-center gap-3">
-                        {booking.status === 'confirmed' && vendor && (
-                          <Link
-                            href={`/vendors/${booking.vendor_id}/book/payment?bookingId=${booking.id}&amount=${booking.deposit_amount ?? 0}&vendorName=${encodeURIComponent(vendor.business_name)}`}
-                            className="inline-block px-4 py-2 rounded-xl text-xs font-bold text-white hover:opacity-90 transition-opacity"
-                            style={{
-                              background: 'linear-gradient(135deg, #4A0E6E 0%, #6B1F9A 100%)',
-                              fontFamily: 'var(--font-syne-cd)',
-                            }}
-                          >
-                            Pay deposit
-                          </Link>
-                        )}
+                        {booking.status === 'confirmed' && vendor && (() => {
+                          const depositAmt = booking.deposit_amount
+                            ?? (booking.budget_for_vendor ? Math.round(booking.budget_for_vendor * 0.2) : 0)
+                          return (
+                            <Link
+                              href={`/vendors/${booking.vendor_id}/book/payment?bookingId=${booking.id}&amount=${depositAmt}&vendorName=${encodeURIComponent(vendor.business_name)}`}
+                              className="inline-block px-4 py-2 rounded-xl text-xs font-bold text-white hover:opacity-90 transition-opacity"
+                              style={{
+                                background: 'linear-gradient(135deg, #4A0E6E 0%, #6B1F9A 100%)',
+                                fontFamily: 'var(--font-syne-cd)',
+                              }}
+                            >
+                              Complete payment
+                            </Link>
+                          )
+                        })()}
                         {booking.status === 'paid' && (
                           <Link
                             href={`/vendors/${booking.vendor_id}`}

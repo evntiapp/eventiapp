@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
+import { useLogoHref } from '@/app/hooks/useLogoHref'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -71,6 +72,7 @@ const EMPTY_FORM: FormData = {
 }
 
 export default function VendorApplyPage() {
+  const logoHref = useLogoHref()
   const [step, setStep] = useState(1)
   const [submitted, setSubmitted] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -166,7 +168,7 @@ export default function VendorApplyPage() {
         <div className="relative z-10 h-full flex flex-col p-8 lg:p-12">
           {/* Logo */}
           <Link
-            href="/"
+            href={logoHref}
             className="text-white text-2xl font-extrabold tracking-tight no-underline"
             style={{ fontFamily: 'var(--font-syne-apply)' }}
           >

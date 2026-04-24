@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { getSupabaseClient } from '@/lib/supabase'
+import { useLogoHref } from '@/app/hooks/useLogoHref'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -248,6 +249,7 @@ function TypingIndicator() {
 const GENERIC_GREETING = "Hi! I'm Eve, your Evnti planning assistant. Tell me about your event — what are you celebrating, when is it, and what's your budget?"
 
 export default function AIPlanPage() {
+  const logoHref = useLogoHref()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -413,7 +415,7 @@ export default function AIPlanPage() {
         style={{ borderColor: 'rgba(255,255,255,0.08)' }}
       >
         <Link
-          href="/"
+          href={logoHref}
           className="text-white text-xl font-bold no-underline"
           style={{ fontFamily: "'Syne', sans-serif" }}
         >

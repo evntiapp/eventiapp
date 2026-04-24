@@ -58,6 +58,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
+import { useLogoHref } from '@/app/hooks/useLogoHref'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -155,6 +156,7 @@ function Skeleton() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 function MessagesInner() {
+  const logoHref = useLogoHref()
   const router = useRouter()
   const searchParams = useSearchParams()
   const initialBookingId = searchParams.get('bookingId')
@@ -318,7 +320,7 @@ function MessagesInner() {
       <nav className="bg-[#1A1A2E] sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <Link
-            href="/"
+            href={logoHref}
             className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity flex-shrink-0"
             style={{ fontFamily: 'var(--font-syne-mg)' }}
           >

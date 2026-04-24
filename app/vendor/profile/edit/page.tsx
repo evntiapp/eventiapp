@@ -300,7 +300,7 @@ export default function VendorProfileEditPage() {
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-5">
             <Link
-              href="/"
+              href="/vendor/dashboard"
               className="text-xl font-extrabold tracking-tight text-[#4A0E6E] hover:opacity-80 transition-opacity"
               style={{ fontFamily: 'var(--font-syne-ve)' }}
             >

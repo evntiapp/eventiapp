@@ -407,7 +407,7 @@ export default function VendorDashboardPage() {
       >
         <nav className="sticky top-0 z-30 bg-[#F8F4FC] border-b border-[#EDE5F7] px-6 h-16 flex items-center">
           <Link
-            href="/"
+            href="/vendor/dashboard"
             className="text-xl font-extrabold tracking-tight text-[#4A0E6E]"
             style={{ fontFamily: 'var(--font-syne-vd)' }}
           >
@@ -493,7 +493,7 @@ export default function VendorDashboardPage() {
           {/* Nav */}
           <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
             <Link
-              href="/"
+              href="/vendor/dashboard"
               className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity flex-shrink-0"
               style={{ fontFamily: 'var(--font-syne-vd)' }}
             >

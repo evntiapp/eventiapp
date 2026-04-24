@@ -10,6 +10,7 @@ import {
   useElements,
 } from '@stripe/react-stripe-js'
 import { Syne, Space_Grotesk } from 'next/font/google'
+import { useLogoHref } from '@/app/hooks/useLogoHref'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -180,6 +181,7 @@ interface Props {
 }
 
 export default function PaymentClient({ vendorId, bookingId, amount, vendorName }: Props) {
+  const logoHref = useLogoHref()
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [initError, setInitError] = useState('')
 
@@ -249,7 +251,7 @@ export default function PaymentClient({ vendorId, bookingId, amount, vendorName 
       >
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center gap-6">
           <Link
-            href="/"
+            href={logoHref}
             className="text-xl font-extrabold tracking-tight text-[#4A0E6E] hover:opacity-80 transition-opacity"
             style={{ fontFamily: 'var(--font-syne-pay)' }}
           >

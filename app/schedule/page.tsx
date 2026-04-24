@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
+import { useLogoHref } from '@/app/hooks/useLogoHref'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -179,6 +180,7 @@ function DragHandle() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 function ScheduleInner() {
+  const logoHref     = useLogoHref()
   const router       = useRouter()
   const searchParams = useSearchParams()
   const eventId      = searchParams.get('eventId')
@@ -322,7 +324,7 @@ function ScheduleInner() {
       >
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <Link
-            href="/"
+            href={logoHref}
             className="text-xl font-extrabold tracking-tight text-[#4A0E6E] hover:opacity-80 transition-opacity flex-shrink-0"
             style={{ fontFamily: 'var(--font-syne-sc)' }}
           >

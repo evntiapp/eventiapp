@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
+import { useLogoHref } from '@/app/hooks/useLogoHref'
 
 const syne = Syne({ subsets: ['latin'], weight: ['400', '600', '700', '800'], variable: '--font-syne' })
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700'], variable: '--font-space' })
@@ -138,6 +139,7 @@ function statusBadge(bookingStatus: string): { label: string; bg: string; color:
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 function BudgetInner() {
+  const logoHref     = useLogoHref()
   const router       = useRouter()
   const searchParams = useSearchParams()
   const eventId      = searchParams.get('eventId')
@@ -285,7 +287,7 @@ function BudgetInner() {
       <nav style={{ background: '#1A1A2E', position: 'sticky', top: 0, zIndex: 40 }}>
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center gap-4">
           <Link
-            href="/"
+            href={logoHref}
             style={{
               fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: '1.35rem',
               letterSpacing: '-0.03em', color: 'white', textDecoration: 'none', flexShrink: 0,

@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
+import { useLogoHref } from '@/app/hooks/useLogoHref'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -251,6 +252,7 @@ function VendorCard({ vendor }: { vendor: VendorProfile }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function VendorsPage() {
+  const logoHref = useLogoHref()
   const [vendors, setVendors] = useState<VendorProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState('')
@@ -321,7 +323,7 @@ export default function VendorsPage() {
       >
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
           <Link
-            href="/"
+            href={logoHref}
             className="text-xl font-extrabold tracking-tight text-[#4A0E6E] hover:opacity-80 transition-opacity flex-shrink-0"
             style={{ fontFamily: 'var(--font-syne-vl)' }}
           >

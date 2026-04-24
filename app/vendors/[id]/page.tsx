@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
+import { useLogoHref } from '@/app/hooks/useLogoHref'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -127,18 +128,26 @@ function ProfileSkeleton() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function VendorProfilePage() {
+  const logoHref = useLogoHref()
   const params = useParams()
+  const router = useRouter()
   const id = params?.id as string
 
   const [vendor, setVendor] = useState<VendorProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
     if (!id) return
 
+    const supabase = getSupabaseClient()
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsLoggedIn(!!user)
+    })
+
     async function fetchVendor() {
-      const supabase = getSupabaseClient()
       const { data, error } = await supabase
         .from('vendor_profiles')
         .select('*')
@@ -156,6 +165,14 @@ export default function VendorProfilePage() {
     fetchVendor()
   }, [id])
 
+  function handleMessageVendor() {
+    if (!isLoggedIn) {
+      router.push(`/auth/signin?redirect=/vendors/${id}`)
+      return
+    }
+    router.push(`/messages?vendor_id=${id}`)
+  }
+
   if (loading) return <ProfileSkeleton />
 
   // ── 404 ──
@@ -167,7 +184,7 @@ export default function VendorProfilePage() {
       >
         <nav className="sticky top-0 z-30 bg-[#F8F4FC] border-b border-[#EDE5F7] px-6 h-16 flex items-center gap-6">
           <Link
-            href="/"
+            href={logoHref}
             className="text-xl font-extrabold tracking-tight text-[#4A0E6E]"
             style={{ fontFamily: 'var(--font-syne-vp)' }}
           >
@@ -216,7 +233,7 @@ export default function VendorProfilePage() {
       >
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center gap-6">
           <Link
-            href="/"
+            href={logoHref}
             className="text-xl font-extrabold tracking-tight text-[#4A0E6E] hover:opacity-80 transition-opacity"
             style={{ fontFamily: 'var(--font-syne-vp)' }}
           >
@@ -534,6 +551,7 @@ export default function VendorProfilePage() {
                 {/* Message vendor */}
                 <button
                   type="button"
+                  onClick={handleMessageVendor}
                   className="w-full py-3.5 rounded-xl text-sm font-semibold border border-[#4A0E6E] text-[#4A0E6E] transition-colors hover:bg-[#F3E8FF]"
                   style={{ fontFamily: 'var(--font-space-vp)' }}
                 >

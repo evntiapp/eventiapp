@@ -22,7 +22,7 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false)
 
   function isValidPassword(pw: string) {
-    return pw.length >= 15 && /[a-zA-Z]/.test(pw) && /[0-9]/.test(pw)
+    return pw.length >= 12 && /[A-Z]/.test(pw) && /[0-9]/.test(pw) && /[^a-zA-Z0-9]/.test(pw)
   }
 
   async function handleSignUp(role: Role) {
@@ -30,7 +30,7 @@ export default function SignUpPage() {
 
     if (!fullName.trim()) { setError('Please enter your full name.'); return }
     if (!email.trim())    { setError('Please enter your email address.'); return }
-    if (!isValidPassword(password)) { setError('Password must be at least 15 characters with letters and numbers.'); return }
+    if (!isValidPassword(password)) { setError('Minimum 12 characters with at least one uppercase letter, number, and special character.'); return }
     if (password !== confirm) { setError('Passwords do not match.'); return }
 
     setLoading(role)
@@ -221,7 +221,7 @@ export default function SignUpPage() {
                   type={showPassword ? 'text' : 'password'} autoComplete="new-password"
                   value={password}
                   onChange={e => { setPassword(e.target.value); setError(null) }}
-                  placeholder="Min. 15 characters"
+                  placeholder="Min. 12 characters"
                   style={{ ...fieldStyle, paddingRight: '2.75rem' }}
                   onFocus={e => (e.currentTarget.style.borderColor = '#6B1F9A')}
                   onBlur={e => (e.currentTarget.style.borderColor = '#DDB8F5')}
@@ -255,7 +255,7 @@ export default function SignUpPage() {
                   fontFamily: 'var(--font-space)', fontSize: '0.8125rem', margin: 0,
                   color: isValidPassword(password) ? '#16a34a' : '#DC2626',
                 }}>
-                  Must be at least 15 characters with letters and numbers
+                  Minimum 12 characters with at least one uppercase letter, number, and special character.
                 </p>
               )}
             </div>
