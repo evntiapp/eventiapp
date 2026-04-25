@@ -112,7 +112,8 @@ export default function HomePage() {
 
   useEffect(() => {
     const sb = getSupabaseClient()
-    sb.auth.getUser().then(async ({ data: { user } }) => {
+    sb.auth.getUser().then(async ({ data }: { data: { user: import('@supabase/supabase-js').User | null } }) => {
+      const user = data.user
       if (!user) return
       setIsLoggedIn(true)
       const { data: vp } = await sb
