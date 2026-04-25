@@ -7,7 +7,7 @@ export function useLogoHref(): string {
 
   useEffect(() => {
     const sb = getSupabaseClient()
-    sb.auth.getUser().then(async ({ data }) => {
+    sb.auth.getUser().then(async ({ data }: { data: { user: import('@supabase/supabase-js').User | null } }) => {
       const user = data.user
       if (!user) return
       const { data: vp } = await sb
