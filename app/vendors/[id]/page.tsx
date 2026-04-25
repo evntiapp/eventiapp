@@ -7,6 +7,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useLogoHref } from '@/app/hooks/useLogoHref'
+import type { User } from '@supabase/supabase-js'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -143,7 +144,8 @@ export default function VendorProfilePage() {
 
     const supabase = getSupabaseClient()
 
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data }: { data: { user: User | null } }) => {
+      const user = data.user
       setIsLoggedIn(!!user)
     })
 

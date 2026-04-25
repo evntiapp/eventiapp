@@ -23,6 +23,7 @@ const spaceGrotesk = Space_Grotesk({
 function SuccessContent() {
   const logoHref = useLogoHref()
   const searchParams = useSearchParams()
+
   const bookingId = searchParams.get('bookingId') ?? ''
   const paymentIntent = searchParams.get('payment_intent') ?? ''
   const ref = paymentIntent.slice(-8)
@@ -41,6 +42,22 @@ function SuccessContent() {
   }, [bookingId])
 
   return (
+    <>
+      {/* Nav */}
+      <nav className="px-6 h-16 flex items-center border-b border-[#EDE5F7] bg-[#F8F4FC] flex-shrink-0">
+        <div className="max-w-sm mx-auto w-full">
+          <Link
+            href={logoHref}
+            className="text-xl font-extrabold tracking-tight text-[#4A0E6E] hover:opacity-80 transition-opacity"
+            style={{ fontFamily: 'var(--font-syne-ps)' }}
+          >
+            evnti.
+          </Link>
+        </div>
+      </nav>
+
+      {/* Centered content */}
+      <div className="flex-1 flex flex-col w-full max-w-[480px] mx-auto">
     <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 text-center">
       {/* Checkmark circle */}
       <div
@@ -115,7 +132,9 @@ function SuccessContent() {
           Browse more vendors
         </Link>
       </div>
-    </div>
+      </div>
+      </div>
+    </>
   )
 }
 
@@ -127,25 +146,9 @@ export default function PaymentSuccessPage() {
       className={`${syne.variable} ${spaceGrotesk.variable} min-h-screen bg-[#F8F4FC] flex flex-col`}
       style={{ fontFamily: 'var(--font-space-ps), system-ui, sans-serif' }}
     >
-      {/* Nav */}
-      <nav className="px-6 h-16 flex items-center border-b border-[#EDE5F7] bg-[#F8F4FC] flex-shrink-0">
-        <div className="max-w-sm mx-auto w-full">
-          <Link
-            href={logoHref}
-            className="text-xl font-extrabold tracking-tight text-[#4A0E6E] hover:opacity-80 transition-opacity"
-            style={{ fontFamily: 'var(--font-syne-ps)' }}
-          >
-            evnti.
-          </Link>
-        </div>
-      </nav>
-
-      {/* Centered content */}
-      <div className="flex-1 flex flex-col w-full max-w-[480px] mx-auto">
-        <Suspense>
-          <SuccessContent />
-        </Suspense>
-      </div>
+      <Suspense>
+        <SuccessContent />
+      </Suspense>
     </div>
   )
 }

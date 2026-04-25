@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { createClient } from '@supabase/supabase-js'
 import { getSupabaseClient } from '@/lib/supabase'
+import type { User } from '@supabase/supabase-js'
 import Image from 'next/image'
 import {
   Wand2, Cpu, ShieldCheck, Clock,
@@ -112,7 +113,7 @@ export default function HomePage() {
 
   useEffect(() => {
     const sb = getSupabaseClient()
-    sb.auth.getUser().then(async ({ data }: { data: { user: import('@supabase/supabase-js').User | null } }) => {
+    sb.auth.getUser().then(async ({ data }: { data: { user: User | null } }) => {
       const user = data.user
       if (!user) return
       setIsLoggedIn(true)

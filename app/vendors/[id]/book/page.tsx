@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useLogoHref } from '@/app/hooks/useLogoHref'
+import type { User } from '@supabase/supabase-js'
 import { CheckCircle2, CalendarDays, MapPin, Users, DollarSign, ClipboardList, Clock, ShieldCheck } from 'lucide-react'
 
 const syne = Syne({
@@ -123,7 +124,10 @@ export default function BookingPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
-    getSupabaseClient().auth.getUser().then(({ data: { user } }) => setIsLoggedIn(!!user))
+    getSupabaseClient().auth.getUser().then(({ data }: { data: { user: User | null } }) => {
+      const user = data.user
+      setIsLoggedIn(!!user)
+    })
   }, [])
 
   useEffect(() => {
