@@ -7,7 +7,8 @@ export function useLogoHref(): string {
 
   useEffect(() => {
     const sb = getSupabaseClient()
-    sb.auth.getUser().then(async ({ data: { user } }) => {
+    sb.auth.getUser().then(async ({ data }) => {
+      const user = data.user
       if (!user) return
       const { data: vp } = await sb
         .from('vendor_profiles')
