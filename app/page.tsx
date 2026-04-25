@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { createClient } from '@supabase/supabase-js'
 import { getSupabaseClient } from '@/lib/supabase'
@@ -110,6 +110,7 @@ export default function HomePage() {
   const [openDropdown, setOpenDropdown]     = useState<'clients' | 'vendors' | null>(null)
   const [isLoggedIn, setIsLoggedIn]         = useState(false)
   const [isVendor, setIsVendor]             = useState(false)
+  const dropdownCloseTimer                  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const sb = getSupabaseClient()
@@ -185,8 +186,8 @@ export default function HomePage() {
             {/* For Clients */}
             <div
               className="relative"
-              onMouseEnter={() => setOpenDropdown('clients')}
-              onMouseLeave={() => setOpenDropdown(null)}
+              onMouseEnter={() => { if (dropdownCloseTimer.current) clearTimeout(dropdownCloseTimer.current); setOpenDropdown('clients') }}
+              onMouseLeave={() => { dropdownCloseTimer.current = setTimeout(() => setOpenDropdown(null), 150) }}
             >
               <button
                 className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13.5px] font-medium transition-colors hover:bg-[#F8F4FC]"
@@ -248,8 +249,8 @@ export default function HomePage() {
             {/* For Vendors */}
             <div
               className="relative"
-              onMouseEnter={() => setOpenDropdown('vendors')}
-              onMouseLeave={() => setOpenDropdown(null)}
+              onMouseEnter={() => { if (dropdownCloseTimer.current) clearTimeout(dropdownCloseTimer.current); setOpenDropdown('vendors') }}
+              onMouseLeave={() => { dropdownCloseTimer.current = setTimeout(() => setOpenDropdown(null), 150) }}
             >
               <button
                 className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[13.5px] font-medium transition-colors hover:bg-[#F8F4FC]"

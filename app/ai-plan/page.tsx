@@ -537,44 +537,42 @@ export default function AIPlanPage() {
           {/* Credit counter / no-credits banner */}
           {noCredits ? (
             <div className="mb-3">
-              <a
-                href="https://buy.stripe.com/test_fZuaEY9ZQeLo5Ez6Ua4AU00"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block rounded-2xl px-5 py-5 transition-opacity hover:opacity-90"
+              <div
+                className="rounded-2xl px-5 py-5"
                 style={{
                   background: 'linear-gradient(135deg, rgba(74,14,110,0.6), rgba(107,31,154,0.5))',
                   border: '1.5px solid rgba(221,184,245,0.35)',
-                  textDecoration: 'none',
-                  cursor: 'pointer',
                 }}
               >
                 <p
-                  className="text-base font-bold mb-1"
-                  style={{ color: '#DDB8F5', fontFamily: "'Space Grotesk', sans-serif", margin: '0 0 4px' }}
+                  className="text-base font-bold mb-4"
+                  style={{ color: '#DDB8F5', fontFamily: "'Space Grotesk', sans-serif", margin: '0 0 16px' }}
                 >
                   You&apos;ve used all your Eve credits.
                 </p>
-                <p
-                  className="text-sm"
-                  style={{ color: 'rgba(255,255,255,0.75)', fontFamily: "'Space Grotesk', sans-serif", margin: 0 }}
+                <a
+                  href="https://buy.stripe.com/test_fZuaEY9ZQeLo5Ez6Ua4AU00"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full text-center py-3 rounded-full transition-opacity hover:opacity-90"
+                  style={{
+                    background: 'white',
+                    color: '#4A0E6E',
+                    fontFamily: 'var(--font-syne), sans-serif',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    textDecoration: 'none',
+                  }}
                 >
                   Get 100 more credits for $9.99 →
-                </p>
-              </a>
-              <p
-                className="text-xs mt-2 text-center"
-                style={{ color: 'rgba(255,255,255,0.35)', fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                After upgrading, contact us at{' '}
-                <a
-                  href="mailto:hello@evntiapp.com"
-                  style={{ color: 'rgba(255,255,255,0.5)', textDecoration: 'underline' }}
-                >
-                  hello@evntiapp.com
                 </a>
-                {' '}to have your credits added.
-              </p>
+                <p
+                  className="text-center mt-3"
+                  style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontFamily: "'Space Grotesk', sans-serif", margin: '12px 0 0' }}
+                >
+                  Credits are added automatically after payment.
+                </p>
+              </div>
             </div>
           ) : credits !== null && (
             <div className="mb-2 text-right">
