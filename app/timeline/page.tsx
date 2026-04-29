@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useLogoHref } from '@/app/hooks/useLogoHref'
+import { ArrowLeft } from 'lucide-react'
 
 const syne = Syne({ subsets: ['latin'], weight: ['400', '600', '700', '800'], variable: '--font-syne' })
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700'], variable: '--font-space' })
@@ -302,6 +303,13 @@ function TimelineInner() {
       {/* ── TOP NAV ── */}
       <nav style={{ background: '#1A1A2E', position: 'sticky', top: 0, zIndex: 40 }}>
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center gap-4">
+          <button
+            onClick={() => router.back()}
+            aria-label="Go back"
+            className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
+          >
+            <ArrowLeft size={18} color="#DDB8F5" />
+          </button>
           <Link
             href={logoHref}
             style={{

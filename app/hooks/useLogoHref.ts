@@ -1,25 +1,20 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { getSupabaseClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 
 export function useLogoHref(): string {
-  const [href, setHref] = useState('/')
+  const pathname = usePathname()
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
-    const sb = getSupabaseClient()
-    sb.auth.getUser().then(async ({ data }: { data: { user: User | null } }) => {
-      const user = data.user
-      if (!user) return
-      const { data: vp } = await sb
-        .from('vendor_profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('application_status', 'approved')
-        .single()
-      setHref(vp ? '/vendor/dashboard' : '/dashboard')
+    getSupabaseClient().auth.getUser().then(({ data }: { data: { user: User | null } }) => {
+      setIsLoggedIn(!!data.user)
     })
   }, [])
 
-  return href
+  if (!isLoggedIn) return '/'
+  if (pathname?.startsWith('/vendor')) return '/vendor/dashboard'
+  return '/dashboard'
 }

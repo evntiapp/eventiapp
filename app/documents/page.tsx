@@ -35,6 +35,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useLogoHref } from '@/app/hooks/useLogoHref'
+import { ArrowLeft } from 'lucide-react'
 
 const syne = Syne({
   subsets: ['latin'],
@@ -403,13 +404,22 @@ function DocumentsInner() {
 
           {/* Nav */}
           <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-            <Link
-              href={logoHref}
-              className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity flex-shrink-0"
-              style={{ fontFamily: 'var(--font-syne-dv)', letterSpacing: '-0.03em' }}
-            >
-              evnti<span style={{ color: '#DDB8F5' }}>.</span>
-            </Link>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <button
+                onClick={() => router.back()}
+                aria-label="Go back"
+                className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <ArrowLeft size={18} color="#DDB8F5" />
+              </button>
+              <Link
+                href={logoHref}
+                className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity"
+                style={{ fontFamily: 'var(--font-syne-dv)', letterSpacing: '-0.03em' }}
+              >
+                evnti<span style={{ color: '#DDB8F5' }}>.</span>
+              </Link>
+            </div>
 
             <span
               className="hidden sm:block text-sm font-semibold text-white/60 truncate max-w-[200px] text-center"

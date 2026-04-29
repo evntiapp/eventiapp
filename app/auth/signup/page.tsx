@@ -20,6 +20,7 @@ export default function SignUpPage() {
   const [loading, setLoading]         = useState<Role | null>(null)
   const [error, setError]             = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
+  const [referralSource, setReferralSource] = useState('')
 
   function isValidPassword(pw: string) {
     return pw.length >= 12 && /[A-Z]/.test(pw) && /[0-9]/.test(pw) && /[^a-zA-Z0-9]/.test(pw)
@@ -39,7 +40,7 @@ export default function SignUpPage() {
     const { data, error: authError } = await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
       password,
-      options: { data: { full_name: fullName.trim() } },
+      options: { data: { full_name: fullName.trim(), referral_source: referralSource || null } },
     })
 
     if (authError) {
@@ -59,6 +60,7 @@ export default function SignUpPage() {
       email: email.trim().toLowerCase(),
       full_name: fullName.trim(),
       role,
+      referral_source: referralSource || null,
       created_at: new Date().toISOString(),
     })
 
@@ -272,6 +274,36 @@ export default function SignUpPage() {
                 onFocus={e => (e.currentTarget.style.borderColor = '#6B1F9A')}
                 onBlur={e => (e.currentTarget.style.borderColor = '#DDB8F5')}
               />
+            </div>
+
+            {/* How did you hear about us */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={labelStyle}>How did you hear about us?</label>
+              <select
+                value={referralSource}
+                onChange={e => setReferralSource(e.target.value)}
+                style={{
+                  ...fieldStyle,
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 1rem center',
+                  paddingRight: '2.5rem',
+                  color: referralSource ? '#1A1A2E' : '#9CA3AF',
+                  cursor: 'pointer',
+                }}
+                onFocus={e => (e.currentTarget.style.borderColor = '#6B1F9A')}
+                onBlur={e => (e.currentTarget.style.borderColor = '#DDB8F5')}
+              >
+                <option value="" disabled>Select an option</option>
+                <option value="Instagram">Instagram</option>
+                <option value="TikTok">TikTok</option>
+                <option value="Google">Google</option>
+                <option value="Friend or family">Friend or family</option>
+                <option value="Facebook">Facebook</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
 
             {/* Error */}

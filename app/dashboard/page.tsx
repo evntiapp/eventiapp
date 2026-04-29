@@ -181,7 +181,8 @@ export default function ClientDashboardPage() {
       supabase
         .from('bookings')
         .select('id, vendor_id, event_type, event_date, deposit_amount, budget_for_vendor, status, created_at, vendor_profiles(business_name, category)')
-        .eq('client_email', user.email)
+        .eq('client_id', user.id)
+        .in('status', ['pending', 'confirmed'])
         .order('created_at', { ascending: false }),
       supabase
         .from('events')
@@ -215,7 +216,16 @@ export default function ClientDashboardPage() {
   if (authLoading || dataLoading) return <DashboardSkeleton />
 
   // ── Derived stats ──
-  const activeBookings = bookings.filter(b => b.status !== 'declined').length
+  const activeBookings = bookings.length
+
+  const VENDOR_CATEGORIES = [
+    'Venue', 'Photography', 'Catering', 'DJ / Music', 'Florals',
+    'Cakes & Desserts', 'Beauty & Hair', 'Videography', 'Decor',
+    'Servers', 'Photo Booth',
+  ]
+  const bookedCategories = new Set(
+    bookings.map(b => b.vendor_profiles?.category).filter(Boolean)
+  )
   const totalSpent = bookings
     .filter(b => b.status === 'paid')
     .reduce((sum, b) => sum + (b.deposit_amount ?? 0), 0)
@@ -502,6 +512,7 @@ export default function ClientDashboardPage() {
               My Bookings
             </h2>
 
+
             {bookings.length === 0 ? (
               <div
                 className="bg-white rounded-2xl overflow-hidden"
@@ -637,6 +648,82 @@ export default function ClientDashboardPage() {
                           </Link>
                         )}
                       </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ── Vendor checklist ── */}
+          <div>
+            <h2
+              className="text-lg font-bold text-[#1A1A2E] mb-5"
+              style={{ fontFamily: 'var(--font-syne-cd)' }}
+            >
+              Vendor checklist
+            </h2>
+
+            {events.length === 0 ? (
+              <div
+                className="bg-white rounded-2xl p-6 flex flex-col items-center text-center"
+                style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
+              >
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center mb-4"
+                  style={{ background: 'rgba(74,14,110,0.08)' }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+                    <rect x="3" y="5" width="16" height="13" rx="2" stroke="#4A0E6E" strokeWidth="1.5" />
+                    <path d="M3 9h16" stroke="#4A0E6E" strokeWidth="1.5" />
+                    <path d="M8 3l3-1.5L14 3" stroke="#4A0E6E" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <p
+                  className="text-sm font-semibold text-[#1A1A2E] mb-1"
+                  style={{ fontFamily: 'var(--font-syne-cd)' }}
+                >
+                  No events yet
+                </p>
+                <p
+                  className="text-xs text-[#7C6B8A] mb-4 leading-relaxed"
+                  style={{ fontFamily: 'var(--font-space-cd)' }}
+                >
+                  Create an event to start tracking your vendor bookings.
+                </p>
+                <Link
+                  href="/onboarding"
+                  className="px-5 py-2.5 rounded-full text-xs font-bold text-white hover:opacity-90 transition-opacity"
+                  style={{ background: '#4A0E6E', fontFamily: 'var(--font-syne-cd)' }}
+                >
+                  Start planning your first event
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {VENDOR_CATEGORIES.map(cat => {
+                  const isBooked = bookedCategories.has(cat)
+                  return (
+                    <div
+                      key={cat}
+                      className="bg-white rounded-xl px-4 py-3 flex items-center justify-between gap-3"
+                      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
+                    >
+                      <span
+                        className="text-sm text-[#1A1A2E]"
+                        style={{ fontFamily: 'var(--font-space-cd)' }}
+                      >
+                        {cat}
+                      </span>
+                      <span
+                        className="text-[11px] font-semibold flex-shrink-0"
+                        style={{
+                          fontFamily: 'var(--font-space-cd)',
+                          color: isBooked ? '#0D9B6A' : '#7C6B8A',
+                        }}
+                      >
+                        {isBooked ? '✓ Booked' : 'Not booked'}
+                      </span>
                     </div>
                   )
                 })}

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Syne, Space_Grotesk } from 'next/font/google'
+import { MapPin } from 'lucide-react'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useLogoHref } from '@/app/hooks/useLogoHref'
 
@@ -75,7 +76,7 @@ const CATEGORY_IMAGES: Record<string, string> = {
 }
 
 const BUDGET_OPTIONS = [
-  { label: 'Any budget', min: null, max: null },
+  { label: 'Budget', min: null, max: null },
   { label: 'Under $500', min: null, max: 500 },
   { label: '$500 – $1,500', min: 500, max: 1500 },
   { label: '$1,500 – $5,000', min: 1500, max: 5000 },
@@ -259,7 +260,8 @@ export default function VendorsPage() {
 
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState('All')
-  const [activeBudget, setActiveBudget] = useState('Any budget')
+  const [activeBudget, setActiveBudget] = useState('Budget')
+  const [zipCode, setZipCode] = useState('')
 
   // Fetch approved & verified vendors on mount
   useEffect(() => {
@@ -287,6 +289,7 @@ export default function VendorsPage() {
     const budget = BUDGET_OPTIONS.find(b => b.label === activeBudget)
     const categoryValue = PILL_TO_CATEGORY[activeCategory]
     const q = search.trim().toLowerCase()
+    const zip = zipCode.trim()
 
     return vendors.filter(v => {
       // Category filter
@@ -307,9 +310,12 @@ export default function VendorsPage() {
         if (!haystack.includes(q)) return false
       }
 
+      // Zip code filter
+      if (zip && !(v.location ?? '').includes(zip)) return false
+
       return true
     })
-  }, [vendors, activeCategory, activeBudget, search])
+  }, [vendors, activeCategory, activeBudget, search, zipCode])
 
   return (
     <div
@@ -363,7 +369,7 @@ export default function VendorsPage() {
             className="text-white/60 text-base mb-8 leading-relaxed"
             style={{ fontFamily: 'var(--font-space-vl)' }}
           >
-            Browse verified vendors across Houston. Filter by category, budget, and availability.
+            Browse verified vendors near you. Filter by category, budget, and availability.
           </p>
 
           {/* Search bar */}
@@ -407,43 +413,63 @@ export default function VendorsPage() {
         className="sticky z-20 bg-[#F8F4FC] border-b border-[#EDE5F7]"
         style={{ top: '64px' }}
       >
-        <div className="max-w-6xl mx-auto px-6 py-3 flex items-center gap-4">
-          {/* Category pills — horizontally scrollable */}
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1 pb-0.5">
-            {CATEGORY_PILLS.map(pill => {
-              const active = activeCategory === pill
-              return (
-                <button
-                  key={pill}
-                  type="button"
-                  onClick={() => setActiveCategory(pill)}
-                  className="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold border transition-all duration-150"
-                  style={{
-                    background: active ? '#4A0E6E' : 'white',
-                    color: active ? 'white' : '#1A1A2E',
-                    borderColor: active ? '#4A0E6E' : '#DDB8F5',
-                    fontFamily: 'var(--font-space-vl)',
-                  }}
-                >
-                  {pill}
-                </button>
-              )
-            })}
+        <div className="max-w-6xl mx-auto px-6 py-3 space-y-3">
+          {/* Row 1: category pills + budget */}
+          <div className="flex items-center gap-4">
+            {/* Category pills — horizontally scrollable */}
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1 pb-0.5">
+              {CATEGORY_PILLS.map(pill => {
+                const active = activeCategory === pill
+                return (
+                  <button
+                    key={pill}
+                    type="button"
+                    onClick={() => setActiveCategory(pill)}
+                    className="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold border transition-all duration-150"
+                    style={{
+                      background: active ? '#4A0E6E' : 'white',
+                      color: active ? 'white' : '#1A1A2E',
+                      borderColor: active ? '#4A0E6E' : '#DDB8F5',
+                      fontFamily: 'var(--font-space-vl)',
+                    }}
+                  >
+                    {pill}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Budget dropdown */}
+            <select
+              value={activeBudget}
+              onChange={e => setActiveBudget(e.target.value)}
+              className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border border-[#DDB8F5] bg-white text-[#1A1A2E] outline-none focus:border-[#4A0E6E] appearance-none cursor-pointer"
+              style={{ fontFamily: 'var(--font-space-vl)' }}
+            >
+              {BUDGET_OPTIONS.map(b => (
+                <option key={b.label} value={b.label}>
+                  {b.label}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Budget dropdown */}
-          <select
-            value={activeBudget}
-            onChange={e => setActiveBudget(e.target.value)}
-            className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border border-[#DDB8F5] bg-white text-[#1A1A2E] outline-none focus:border-[#4A0E6E] appearance-none cursor-pointer"
-            style={{ fontFamily: 'var(--font-space-vl)' }}
-          >
-            {BUDGET_OPTIONS.map(b => (
-              <option key={b.label} value={b.label}>
-                {b.label}
-              </option>
-            ))}
-          </select>
+          {/* Row 2: zip code search */}
+          <div className="relative max-w-xs">
+            <MapPin
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#7C6B8A]"
+              aria-hidden="true"
+            />
+            <input
+              type="text"
+              value={zipCode}
+              onChange={e => setZipCode(e.target.value)}
+              placeholder="Search by zip code"
+              className="w-full pl-8 pr-3 py-1.5 rounded-full text-xs border border-[#DDB8F5] bg-white text-[#1A1A2E] placeholder-[#C0ACD4] outline-none focus:border-[#4A0E6E] transition-colors"
+              style={{ fontFamily: 'var(--font-space-vl)' }}
+            />
+          </div>
         </div>
       </div>
 
@@ -468,7 +494,7 @@ export default function VendorsPage() {
 
         {/* Loading skeletons */}
         {loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
@@ -477,7 +503,7 @@ export default function VendorsPage() {
 
         {/* Vendor grid */}
         {!loading && filtered.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map(vendor => (
               <VendorCard key={vendor.id} vendor={vendor} />
             ))}
@@ -532,14 +558,15 @@ export default function VendorsPage() {
               className="text-[#7C6B8A] text-sm mb-6"
               style={{ fontFamily: 'var(--font-space-vl)' }}
             >
-              Try adjusting your category, budget, or search term.
+              Try adjusting your category, budget, zip code, or search term.
             </p>
             <button
               type="button"
               onClick={() => {
                 setSearch('')
                 setActiveCategory('All')
-                setActiveBudget('Any budget')
+                setActiveBudget('Budget')
+                setZipCode('')
               }}
               className="px-5 py-2.5 rounded-full text-sm font-semibold border border-[#4A0E6E] text-[#4A0E6E] hover:bg-[#F3E8FF] transition-colors"
               style={{ fontFamily: 'var(--font-space-vl)' }}

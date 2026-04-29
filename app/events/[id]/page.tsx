@@ -106,8 +106,8 @@ function getTasks(eventDate: string | null): Task[] {
   }
   return [
     { text: 'Confirm all bookings',          due: 'This week' },
-    { text: 'Create day-of timeline',        due: 'Within 2 weeks' },
-    { text: 'Arrange transportation',        due: 'Within 2 weeks' },
+    { text: 'Plan your event schedule',      due: 'Within 2 weeks' },
+    { text: 'Manage logistics',              due: 'Within 2 weeks' },
     { text: 'Prepare payments',              due: 'Before event' },
   ]
 }
@@ -246,7 +246,7 @@ export default function EventSummaryPage() {
             evnti<span style={{ color: '#DDB8F5' }}>.</span>
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-3">
             <Link
               href="/dashboard"
               style={{ fontFamily: 'var(--font-space)', fontSize: '0.875rem', fontWeight: 500, color: 'rgba(255,255,255,0.65)', textDecoration: 'none' }}
@@ -293,7 +293,7 @@ export default function EventSummaryPage() {
       </nav>
 
       {/* ── HERO BANNER ── */}
-      <div className="relative overflow-hidden" style={{ minHeight: 220 }}>
+      <div className="relative" style={{ minHeight: 220 }}>
         <div style={{
           position: 'absolute', inset: 0,
           backgroundImage: "url('/images/feature.jpg')",
@@ -443,6 +443,7 @@ export default function EventSummaryPage() {
                       {/* Find vendors link */}
                       <Link
                         href={`/vendors?category=${slug}`}
+                        className="hidden sm:inline"
                         style={{
                           fontFamily: 'var(--font-space)', fontSize: '0.75rem', fontWeight: 600,
                           color: '#4A0E6E', textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap',

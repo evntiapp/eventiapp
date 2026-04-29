@@ -225,7 +225,7 @@ export default function HomePage() {
                 </p>
                 {([
                   { icon: <Calendar size={14} />, label: 'Plan an event',   desc: 'Start planning in 5 minutes',        href: '/onboarding' },
-                  { icon: <Search   size={14} />, label: 'Browse vendors',  desc: 'Find verified Houston vendors',       href: '/vendors' },
+                  { icon: <Search   size={14} />, label: 'Browse vendors',  desc: 'Find verified vendors near you',       href: '/vendors' },
                   { icon: <Sparkles size={14} />, label: 'Ask Eve',         desc: 'AI-powered planning assistant',       href: '/ai-plan' },
                   { icon: <Tag      size={14} />, label: 'Pricing',         desc: 'Free to use, pay only when you book', action: () => { setOpenDropdown(null); document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' }) } },
                 ] as { icon: React.ReactNode; label: string; desc: string; href?: string; action?: () => void }[]).map(item => {
@@ -421,7 +421,7 @@ export default function HomePage() {
               </p>
               {([
                 { icon: <Calendar size={15} />, label: 'Plan an event',   desc: 'Start planning in 5 minutes',        href: '/onboarding' },
-                { icon: <Search   size={15} />, label: 'Browse vendors',  desc: 'Find verified Houston vendors',       href: '/vendors' },
+                { icon: <Search   size={15} />, label: 'Browse vendors',  desc: 'Find verified vendors near you',       href: '/vendors' },
                 { icon: <Sparkles size={15} />, label: 'Ask Eve',         desc: 'AI-powered planning assistant',       href: '/ai-plan' },
                 { icon: <Tag      size={15} />, label: 'Pricing',         desc: 'Free to use, pay only when you book', action: () => { setMobileMenuOpen(false); setTimeout(() => document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth' }), 80) } },
               ] as { icon: React.ReactNode; label: string; desc: string; href?: string; action?: () => void }[]).map(item => {
