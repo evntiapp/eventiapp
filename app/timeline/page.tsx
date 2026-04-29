@@ -52,9 +52,9 @@ function formatDate(iso: string): string {
 const ALL_VENDOR_CATEGORIES = [
   'Venue',
   'Decor',
-  'Food & Catering',
+  'Catering',
   'Cake',
-  'Drinks & Bar Service',
+  'Bar Service',
   'Entertainment',
   'MC',
   'Photography',
@@ -63,7 +63,7 @@ const ALL_VENDOR_CATEGORIES = [
   'Beauty & Hair',
   'Makeup',
   'DJ',
-  'Tech & Lighting',
+  'Lighting & Tech',
 ]
 
 function getVendorList(_eventType: string | null): string[] {
@@ -75,7 +75,7 @@ function getVendorList(_eventType: string | null): string[] {
 const BASE_REMINDERS = [
   'Confirm your outfit & shoes',
   'Finalize your guest list',
-  'Arrange transportation to & from venue',
+  'Manage logistics',
   'Book your accommodation if needed',
   'Plan rehearsal or pre-event schedule',
   'Sort event favors or gifts',
@@ -382,7 +382,7 @@ function TimelineInner() {
                 <div style={{ fontFamily: 'var(--font-syne)', fontSize: '1.5rem', fontWeight: 800, color: days < 30 ? '#FF6B6B' : 'white', lineHeight: 1 }}>
                   {Math.max(days, 0)}
                 </div>
-                <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.42)', letterSpacing: '0.08em', marginTop: 2 }}>
+                <div style={{ fontFamily: 'var(--font-space)', fontSize: '0.62rem', color: 'rgba(255,255,255,0.42)', letterSpacing: '0.08em', marginTop: 2 }}>
                   {days <= 0 ? 'TODAY' : 'DAYS TO GO'}
                 </div>
               </div>
@@ -394,7 +394,7 @@ function TimelineInner() {
               <div style={{ fontFamily: 'var(--font-syne)', fontSize: '1.5rem', fontWeight: 800, color: 'white', lineHeight: 1 }}>
                 {bookedMap.size}
               </div>
-              <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.42)', letterSpacing: '0.08em', marginTop: 2 }}>
+              <div style={{ fontFamily: 'var(--font-space)', fontSize: '0.62rem', color: 'rgba(255,255,255,0.42)', letterSpacing: '0.08em', marginTop: 2 }}>
                 VENDORS BOOKED
               </div>
             </div>
@@ -405,7 +405,7 @@ function TimelineInner() {
               <div style={{ fontFamily: 'var(--font-syne)', fontSize: '1.5rem', fontWeight: 800, color: 'white', lineHeight: 1 }}>
                 {progress}%
               </div>
-              <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.42)', letterSpacing: '0.08em', marginTop: 2 }}>
+              <div style={{ fontFamily: 'var(--font-space)', fontSize: '0.62rem', color: 'rgba(255,255,255,0.42)', letterSpacing: '0.08em', marginTop: 2 }}>
                 COMPLETE
               </div>
             </div>
@@ -460,9 +460,10 @@ function TimelineInner() {
 
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <span style={{
-                      fontFamily: 'var(--font-syne)', fontSize: '0.9rem', fontWeight: 700,
+                      fontFamily: 'var(--font-syne)', fontSize: '15px', fontWeight: 600,
                       color: checked ? '#9CA3AF' : '#1A1A2E',
                       textDecoration: checked ? 'line-through' : 'none',
+                      whiteSpace: 'nowrap',
                     }}>
                       {vendor}
                     </span>
@@ -525,7 +526,7 @@ function TimelineInner() {
                 >
                   <Checkbox checked={done} onChange={() => toggleReminder(i)} label={reminder} />
                   <span style={{
-                    fontFamily: 'var(--font-space)', fontSize: '0.875rem', fontWeight: 500,
+                    fontFamily: 'var(--font-syne)', fontSize: '15px', fontWeight: 600,
                     color: done ? '#9CA3AF' : '#1A1A2E',
                     textDecoration: done ? 'line-through' : 'none',
                     flex: 1,
@@ -612,7 +613,7 @@ function TimelineInner() {
                             >
                               <Checkbox checked={done} onChange={() => toggleTimeline(idx)} label={task} />
                               <span style={{
-                                fontFamily: 'var(--font-space)', fontSize: '0.875rem', fontWeight: 500,
+                                fontFamily: 'var(--font-syne)', fontSize: '15px', fontWeight: 600,
                                 color: done ? '#9CA3AF' : '#1A1A2E',
                                 textDecoration: done ? 'line-through' : 'none',
                                 flex: 1,

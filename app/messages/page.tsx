@@ -317,47 +317,68 @@ function MessagesInner() {
       className={`${syne.variable} ${spaceGrotesk.variable} min-h-screen bg-[#F8F4FC] flex flex-col`}
       style={{ fontFamily: 'var(--font-space-mg), system-ui, sans-serif' }}
     >
-      {/* ── NAV ── */}
-      <nav className="bg-[#1A1A2E] sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <button
-              onClick={() => router.back()}
-              aria-label="Go back"
-              className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors"
-            >
-              <ArrowLeft size={18} color="#DDB8F5" />
-            </button>
+      {/* ── HERO ── */}
+      <div className="relative" style={{ minHeight: 200 }}>
+        <img
+          src="/images/feature.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover object-center"
+        />
+        <div className="absolute inset-0" style={{ background: 'rgba(26,26,46,0.85)' }} />
+
+        <div className="relative z-10">
+          {/* Nav row inside hero */}
+          <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <button
+                onClick={() => router.back()}
+                aria-label="Go back"
+                className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <ArrowLeft size={18} color="#DDB8F5" />
+              </button>
+              <Link
+                href={logoHref}
+                className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity"
+                style={{ fontFamily: 'var(--font-syne-mg)' }}
+              >
+                evnti.
+              </Link>
+            </div>
             <Link
-              href={logoHref}
-              className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity"
-              style={{ fontFamily: 'var(--font-syne-mg)' }}
+              href={isVendor ? '/vendor/dashboard' : '/dashboard'}
+              className="px-4 py-2 rounded-full text-xs font-semibold border border-white/20 text-white/70 hover:border-white/50 hover:text-white transition-colors flex-shrink-0"
+              style={{ fontFamily: 'var(--font-space-mg)' }}
             >
-              evnti.
+              ← Dashboard
             </Link>
           </div>
-          <span
-            className="text-sm font-semibold text-white/70 hidden sm:block"
-            style={{ fontFamily: 'var(--font-syne-mg)' }}
-          >
-            Messages
-          </span>
-          <Link
-            href={isVendor ? '/vendor/dashboard' : '/dashboard'}
-            className="px-4 py-2 rounded-full text-xs font-semibold border border-white/20 text-white/70 hover:border-white/50 hover:text-white transition-colors flex-shrink-0"
-            style={{ fontFamily: 'var(--font-space-mg)' }}
-          >
-            ← Dashboard
-          </Link>
+
+          {/* Hero text */}
+          <div className="max-w-6xl mx-auto px-6 pt-2 pb-8">
+            <p
+              className="text-[10px] font-semibold uppercase mb-2"
+              style={{ color: '#DDB8F5', fontFamily: 'var(--font-space-mg)', letterSpacing: '0.18em' }}
+            >
+              Messages
+            </p>
+            <h1
+              className="text-[28px] font-bold text-white leading-tight"
+              style={{ fontFamily: 'var(--font-syne-mg)' }}
+            >
+              Your Conversations
+            </h1>
+          </div>
         </div>
-      </nav>
+      </div>
 
       {/* ── TWO-COLUMN LAYOUT ── */}
-      <div className="flex-1 max-w-6xl mx-auto w-full sm:px-6 flex" style={{ minHeight: 'calc(100vh - 64px)' }}>
+      <div className="flex-1 max-w-6xl mx-auto w-full sm:px-6 sm:py-6 flex sm:gap-4 overflow-hidden">
 
         {/* ── LEFT: Conversation list ── */}
         <div
-          className={`${activeBookingId ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-80 lg:w-96 flex-shrink-0 bg-white border-r border-[#EDE5F7]`}
+          className={`${activeBookingId ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-80 lg:w-96 flex-shrink-0 bg-white sm:rounded-2xl overflow-hidden`}
+          style={{ boxShadow: '0 2px 12px rgba(74,14,110,0.08)' }}
         >
           {/* Header + search */}
           <div className="px-4 pt-5 pb-3 border-b border-[#EDE5F7]">
@@ -454,7 +475,10 @@ function MessagesInner() {
         </div>
 
         {/* ── RIGHT: Thread ── */}
-        <div className={`${activeBookingId ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-[#F8F4FC] min-w-0`}>
+        <div
+          className={`${activeBookingId ? 'flex' : 'hidden md:flex'} flex-1 flex-col bg-white sm:rounded-2xl overflow-hidden min-w-0`}
+          style={{ boxShadow: '0 2px 12px rgba(74,14,110,0.08)' }}
+        >
           {activeConv ? (
             <>
               {/* Thread header */}
@@ -490,7 +514,7 @@ function MessagesInner() {
               </div>
 
               {/* Messages body */}
-              <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-1">
+              <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-1 bg-[#F8F4FC]">
                 {messageGroups.length === 0 ? (
                   <div className="flex items-center justify-center h-full">
                     <p className="text-sm text-[#7C6B8A]" style={{ fontFamily: 'var(--font-space-mg)' }}>
