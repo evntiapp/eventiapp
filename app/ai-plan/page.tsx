@@ -268,7 +268,7 @@ function TypingIndicator() {
   )
 }
 
-const GENERIC_GREETING = "Hi! I'm Eve, your Evnti planning assistant. Tell me about your event — what are you celebrating, when is it, and what's your budget?"
+const GENERIC_GREETING = "Hi! I'm Eve, your Evnti planning assistant. I can see you're planning a [event type] — here's what I'd focus on first: tell me your vision and I'll build you a full action plan with vendor recommendations."
 
 export default function AIPlanPage() {
   const logoHref = useLogoHref()
@@ -320,7 +320,7 @@ export default function AIPlanPage() {
           setMessages([{
             role: 'assistant',
             content: type
-              ? `Hi! I'm Eve, your Evnti planning assistant. I can see you're planning a ${type} — I'm ready to help. What would you like to work on first?`
+              ? `Hi! I'm Eve, your Evnti planning assistant. I can see you're planning a ${type} — here's what I'd focus on first: tell me your vision and I'll build you a full action plan with vendor recommendations.`
               : GENERIC_GREETING,
           }])
         } else {
@@ -431,7 +431,8 @@ export default function AIPlanPage() {
       </nav>
 
       {/* Hero */}
-      <div className="px-6 pt-6 pb-5 text-center flex-shrink-0">
+      <div className="px-4 pt-6 pb-5 flex-shrink-0">
+        <div className="max-w-3xl mx-auto text-center">
         <h1
           className="text-white mb-1"
           style={{ fontFamily: "'Syne', sans-serif", fontSize: 24, fontWeight: 700, lineHeight: 1.2 }}
@@ -441,21 +442,24 @@ export default function AIPlanPage() {
         <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>
           Your personal event planning assistant.
         </p>
+        </div>
       </div>
 
       {/* Mood board */}
       {hasEventContext && eventContext && ((eventContext.keywords?.length ?? 0) > 0 || (eventContext.colors?.length ?? 0) > 0) && (
         <div className="px-4 flex-shrink-0">
+          <div className="max-w-3xl mx-auto">
           <MoodBoard
             keywords={eventContext.keywords ?? []}
             colors={eventContext.colors ?? []}
           />
+          </div>
         </div>
       )}
 
       {/* Chat area */}
       <div className="flex-1 overflow-y-auto pb-4" style={{ background: '#F8F4FC' }}>
-        <div className="max-w-[720px] mx-auto flex flex-col gap-4 px-4 pt-4">
+        <div className="max-w-3xl mx-auto flex flex-col gap-4 px-4 pt-4">
 
           {/* Suggestion chips — only when no user messages yet */}
           {hasOnlyGreeting && (
@@ -552,7 +556,7 @@ export default function AIPlanPage() {
         className="flex-shrink-0 px-4 pt-3 pb-5"
         style={{ background: '#F8F4FC', borderTop: '1px solid rgba(74,14,110,0.08)' }}
       >
-        <div className="max-w-[720px] mx-auto">
+        <div className="max-w-3xl mx-auto">
 
           {/* No-credits banner */}
           {noCredits && (

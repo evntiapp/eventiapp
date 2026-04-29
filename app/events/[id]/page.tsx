@@ -7,7 +7,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useLogoHref } from '@/app/hooks/useLogoHref'
-import { Home, Store, Sparkles, Calendar, Grid } from 'lucide-react'
+import { Home, Store, Sparkles, Calendar, Grid, Wallet, Users, FileText, Clock } from 'lucide-react'
 
 const syne = Syne({ subsets: ['latin'], weight: ['400', '600', '700', '800'], variable: '--font-syne' })
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700'], variable: '--font-space' })
@@ -299,7 +299,7 @@ export default function EventSummaryPage() {
           backgroundImage: "url('/images/feature.jpg')",
           backgroundSize: 'cover', backgroundPosition: 'center',
         }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,26,46,0.82)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(26,26,46,0.85)' }} />
         <div className="relative z-10 max-w-6xl mx-auto px-6 py-12 pb-16">
           <p style={{
             fontFamily: 'var(--font-space)', fontSize: '0.65rem', fontWeight: 700,
@@ -374,11 +374,11 @@ export default function EventSummaryPage() {
       )}
 
       {/* ── MAIN CONTENT ── */}
-      <div className="max-w-6xl mx-auto px-6 py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 lg:py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
 
           {/* ── LEFT COLUMN ── */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 order-2 lg:order-1">
 
             {/* Section 1 — Vendor Checklist */}
             <div style={card}>
@@ -515,7 +515,39 @@ export default function EventSummaryPage() {
           </div>
 
           {/* ── RIGHT COLUMN ── */}
-          <div className="lg:sticky lg:top-24 flex flex-col gap-5">
+          <div className="order-1 lg:order-2 flex flex-col gap-5 lg:sticky lg:top-24">
+
+            {/* Card 0 — Quick Actions */}
+            <div style={{ ...card, marginBottom: 0 }}>
+              <h3 style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: '0.9rem', color: '#1A1A2E', marginBottom: '0.875rem' }}>
+                Quick Actions
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                {[
+                  { label: 'Budget',    href: `/budget?eventId=${id}`,   icon: <Wallet   size={18} color="#4A0E6E" /> },
+                  { label: 'Timeline',  href: `/timeline?eventId=${id}`, icon: <Clock    size={18} color="#4A0E6E" /> },
+                  { label: 'Guests',    href: `/guests?eventId=${id}`,   icon: <Users    size={18} color="#4A0E6E" /> },
+                  { label: 'Documents', href: `/documents?eventId=${id}`,icon: <FileText size={18} color="#4A0E6E" /> },
+                ].map(({ label, href, icon }) => (
+                  <Link
+                    key={label}
+                    href={href}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      gap: 8, padding: '0.875rem 0.5rem',
+                      background: 'rgba(74,14,110,0.05)',
+                      border: '1px solid rgba(74,14,110,0.1)',
+                      borderRadius: 14, textDecoration: 'none',
+                    }}
+                  >
+                    {icon}
+                    <span style={{ fontFamily: 'var(--font-space)', fontSize: '0.8rem', fontWeight: 600, color: '#4A0E6E' }}>
+                      {label}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
 
             {/* Card 1 — Event Summary */}
             <div style={{ ...card, marginBottom: 0 }}>
