@@ -465,7 +465,7 @@ export default function OnboardingPage() {
 
       {/* ── SCREEN 0: SPLASH ─────────────────────────────────────────────── */}
       {screen === 0 && (
-        <div className="flex flex-col md:flex-row overflow-x-hidden" style={{ minHeight: '100vh', width: '100%' }}>
+        <div className="flex flex-col md:flex-row overflow-x-hidden" style={{ height: '100vh', overflow: 'hidden', width: '100%', background: '#F8F4FC' }}>
 
           {/* ── LEFT PANEL (60%) ── */}
           <div className="relative overflow-hidden flex-shrink-0 w-full h-[200px] md:w-[60%] md:h-auto md:min-h-screen">
@@ -478,7 +478,7 @@ export default function OnboardingPage() {
             {/* Dark overlay */}
             <div style={{
               position: 'absolute', inset: 0,
-              background: 'rgba(26,26,46,0.7)',
+              background: 'rgba(26,26,46,0.88)',
               zIndex: 1,
             }} />
 
@@ -550,8 +550,8 @@ export default function OnboardingPage() {
           </div>
 
           {/* ── RIGHT PANEL (40%) ── */}
-          <div className="w-full md:w-[40%] flex-shrink-0 flex items-center justify-center px-6 py-10 md:px-12 md:py-[60px]" style={{
-            background: '#ffffff',
+          <div className="w-full md:w-[40%] flex-1 flex items-center justify-center px-6 py-10 md:px-12 md:py-[60px]" style={{
+            background: '#F8F4FC',
             boxSizing: 'border-box',
           }}>
             <div style={{

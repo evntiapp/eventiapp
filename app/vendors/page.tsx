@@ -3,8 +3,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Syne, Space_Grotesk } from 'next/font/google'
-import { MapPin } from 'lucide-react'
+import { MapPin, ArrowLeft } from 'lucide-react'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useLogoHref } from '@/app/hooks/useLogoHref'
 
@@ -254,6 +255,7 @@ function VendorCard({ vendor }: { vendor: VendorProfile }) {
 
 export default function VendorsPage() {
   const logoHref = useLogoHref()
+  const router = useRouter()
   const [vendors, setVendors] = useState<VendorProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState('')
@@ -323,22 +325,28 @@ export default function VendorsPage() {
       style={{ fontFamily: 'var(--font-space-vl), system-ui, sans-serif' }}
     >
       {/* ── TOP NAV ── */}
-      <nav
-        className="sticky top-0 z-30 bg-[#F8F4FC] border-b border-[#EDE5F7]"
-        style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
-      >
+      <nav className="sticky top-0 z-30" style={{ background: '#1A1A2E' }}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-          <Link
-            href={logoHref}
-            className="text-xl font-extrabold tracking-tight text-[#4A0E6E] hover:opacity-80 transition-opacity flex-shrink-0"
-            style={{ fontFamily: 'var(--font-syne-vl)' }}
-          >
-            evnti.
-          </Link>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <button
+              onClick={() => router.back()}
+              aria-label="Go back"
+              className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <ArrowLeft size={18} color="white" />
+            </button>
+            <Link
+              href={logoHref}
+              className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity"
+              style={{ fontFamily: 'var(--font-syne-vl)' }}
+            >
+              evnti<span style={{ color: '#DDB8F5' }}>.</span>
+            </Link>
+          </div>
 
           <span
-            className="text-sm font-semibold text-[#1A1A2E] hidden sm:block"
-            style={{ fontFamily: 'var(--font-syne-vl)' }}
+            className="text-sm font-semibold hidden sm:block"
+            style={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-syne-vl)' }}
           >
             Find vendors
           </span>

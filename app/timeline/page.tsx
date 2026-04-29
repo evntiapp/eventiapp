@@ -308,7 +308,7 @@ function TimelineInner() {
             aria-label="Go back"
             className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
           >
-            <ArrowLeft size={18} color="#DDB8F5" />
+            <ArrowLeft size={18} color="white" />
           </button>
           <Link
             href={logoHref}

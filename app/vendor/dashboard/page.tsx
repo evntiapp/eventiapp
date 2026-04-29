@@ -405,13 +405,13 @@ export default function VendorDashboardPage() {
         className={`${syne.variable} ${spaceGrotesk.variable} min-h-screen bg-[#F8F4FC] flex flex-col`}
         style={{ fontFamily: 'var(--font-space-vd), system-ui, sans-serif' }}
       >
-        <nav className="sticky top-0 z-30 bg-[#F8F4FC] border-b border-[#EDE5F7] px-6 h-16 flex items-center">
+        <nav className="sticky top-0 z-30 px-6 h-16 flex items-center" style={{ background: '#1A1A2E' }}>
           <Link
             href="/vendor/dashboard"
-            className="text-xl font-extrabold tracking-tight text-[#4A0E6E]"
+            className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity"
             style={{ fontFamily: 'var(--font-syne-vd)' }}
           >
-            evnti.
+            evnti<span style={{ color: '#DDB8F5' }}>.</span>
           </Link>
         </nav>
         <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-24">
@@ -480,7 +480,45 @@ export default function VendorDashboardPage() {
       className={`${syne.variable} ${spaceGrotesk.variable} min-h-screen bg-[#F8F4FC]`}
       style={{ fontFamily: 'var(--font-space-vd), system-ui, sans-serif' }}
     >
-      {/* ── HERO BANNER (nav + heading inside) ── */}
+      {/* ── NAV ── */}
+      <nav className="sticky top-0 z-30" style={{ background: '#1A1A2E' }}>
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+          <Link
+            href="/vendor/dashboard"
+            className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity flex-shrink-0"
+            style={{ fontFamily: 'var(--font-syne-vd)' }}
+          >
+            evnti<span style={{ color: '#DDB8F5' }}>.</span>
+          </Link>
+
+          <span
+            className="text-sm font-semibold text-white/60 hidden sm:block"
+            style={{ fontFamily: 'var(--font-syne-vd)' }}
+          >
+            Vendor Dashboard
+          </span>
+
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <span
+              className="text-sm text-white/50 hidden md:block"
+              style={{ fontFamily: 'var(--font-space-vd)' }}
+            >
+              {vendor.business_name}
+            </span>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={signingOut}
+              className="px-4 py-2 rounded-full text-xs font-semibold border border-white/20 text-white/70 bg-transparent hover:border-white/50 hover:text-white transition-colors disabled:opacity-50"
+              style={{ fontFamily: 'var(--font-space-vd)' }}
+            >
+              {signingOut ? 'Signing out...' : 'Sign out'}
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* ── HERO BANNER ── */}
       <div className="relative">
         <img
           src="/images/feature.jpg"
@@ -490,41 +528,7 @@ export default function VendorDashboardPage() {
         <div className="absolute inset-0" style={{ background: 'rgba(26,26,46,0.85)' }} />
 
         <div className="relative z-10">
-          {/* Nav */}
-          <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-            <Link
-              href="/vendor/dashboard"
-              className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity flex-shrink-0"
-              style={{ fontFamily: 'var(--font-syne-vd)' }}
-            >
-              evnti.
-            </Link>
-
-            <span
-              className="text-sm font-semibold text-white/70 hidden sm:block"
-              style={{ fontFamily: 'var(--font-syne-vd)' }}
-            >
-              Vendor Dashboard
-            </span>
-
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <span
-                className="text-sm text-white/50 hidden md:block"
-                style={{ fontFamily: 'var(--font-space-vd)' }}
-              >
-                {vendor.business_name}
-              </span>
-              <button
-                type="button"
-                onClick={handleSignOut}
-                disabled={signingOut}
-                className="px-4 py-2 rounded-full text-xs font-semibold border border-white/20 text-white/70 bg-transparent hover:border-white/50 hover:text-white transition-colors disabled:opacity-50"
-                style={{ fontFamily: 'var(--font-space-vd)' }}
-              >
-                {signingOut ? 'Signing out...' : 'Sign out'}
-              </button>
-            </div>
-          </nav>
+          <div />
 
           {/* Heading */}
           <div className="max-w-6xl mx-auto px-6 pt-8 pb-20 text-left">

@@ -391,6 +391,43 @@ function DocumentsInner() {
       style={{ fontFamily: 'var(--font-space-dv), system-ui, sans-serif' }}
     >
 
+      {/* ── NAV ── */}
+      <nav className="sticky top-0 z-30" style={{ background: '#1A1A2E' }}>
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <button
+              onClick={() => router.back()}
+              aria-label="Go back"
+              className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <ArrowLeft size={18} color="white" />
+            </button>
+            <Link
+              href={logoHref}
+              className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity"
+              style={{ fontFamily: 'var(--font-syne-dv)', letterSpacing: '-0.03em' }}
+            >
+              evnti<span style={{ color: '#DDB8F5' }}>.</span>
+            </Link>
+          </div>
+
+          <span
+            className="hidden sm:block text-sm font-semibold truncate max-w-[200px] text-center"
+            style={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-syne-dv)' }}
+          >
+            {eventLabel}
+          </span>
+
+          <Link
+            href="/dashboard"
+            className="text-xs font-semibold px-4 py-2 rounded-full border border-white/20 text-white/70 hover:border-white/50 hover:text-white transition-colors flex-shrink-0"
+            style={{ fontFamily: 'var(--font-space-dv)' }}
+          >
+            My Dashboard
+          </Link>
+        </div>
+      </nav>
+
       {/* ── HERO BANNER ── */}
       <div className="relative">
         <img
@@ -398,44 +435,9 @@ function DocumentsInner() {
           alt=""
           className="absolute inset-0 w-full h-full object-cover"
         />
-        <div className="absolute inset-0" style={{ background: 'rgba(26,10,46,0.88)' }} />
+        <div className="absolute inset-0" style={{ background: 'rgba(26,26,46,0.85)' }} />
 
         <div className="relative z-10">
-
-          {/* Nav */}
-          <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <button
-                onClick={() => router.back()}
-                aria-label="Go back"
-                className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors"
-              >
-                <ArrowLeft size={18} color="#DDB8F5" />
-              </button>
-              <Link
-                href={logoHref}
-                className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity"
-                style={{ fontFamily: 'var(--font-syne-dv)', letterSpacing: '-0.03em' }}
-              >
-                evnti<span style={{ color: '#DDB8F5' }}>.</span>
-              </Link>
-            </div>
-
-            <span
-              className="hidden sm:block text-sm font-semibold text-white/60 truncate max-w-[200px] text-center"
-              style={{ fontFamily: 'var(--font-syne-dv)' }}
-            >
-              {eventLabel}
-            </span>
-
-            <Link
-              href="/dashboard"
-              className="text-xs font-semibold px-4 py-2 rounded-full border border-white/20 text-white/70 hover:border-white/50 hover:text-white transition-colors flex-shrink-0"
-              style={{ fontFamily: 'var(--font-space-dv)' }}
-            >
-              My Dashboard
-            </Link>
-          </nav>
 
           {/* Heading + stat pills */}
           <div className="max-w-6xl mx-auto px-6 pt-8 pb-20">

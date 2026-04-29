@@ -146,7 +146,7 @@ function formatEventDate(dateStr: string): string {
 function ScheduleSkeleton() {
   return (
     <div className="min-h-screen bg-[#F8F4FC] animate-pulse">
-      <div className="h-16 bg-white border-b border-[#EDE5F7]" />
+      <div className="h-16 bg-[#1A1A2E]" />
       <div className="h-[260px] bg-[#1A1A2E]" />
       <div className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-5">
@@ -357,7 +357,7 @@ function ScheduleInner() {
       </nav>
 
       {/* ── HERO ── */}
-      <div className="relative h-[260px] overflow-hidden">
+      <div className="relative overflow-hidden" style={{ minHeight: 220 }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/images/feature.jpg"
@@ -366,43 +366,51 @@ function ScheduleInner() {
         />
         <div
           className="absolute inset-0"
-          style={{ background: 'linear-gradient(to top, rgba(74,14,110,0.95) 0%, rgba(74,14,110,0.65) 60%, rgba(26,26,46,0.4) 100%)' }}
+          style={{ background: 'rgba(26,26,46,0.85)' }}
         />
 
-        <div className="relative z-10 h-full flex flex-col justify-end max-w-6xl mx-auto px-6 pb-8">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <p
-                className="text-xs font-bold uppercase tracking-widest mb-2"
-                style={{ color: '#DDB8F5', fontFamily: 'var(--font-space-sc)', letterSpacing: '0.12em' }}
-              >
-                Day-of Schedule
-              </p>
-              <h1
-                className="text-3xl lg:text-4xl font-bold text-white leading-tight mb-2"
-                style={{ fontFamily: 'var(--font-syne-sc)' }}
-              >
-                {event?.event_type ?? 'Your Event'}
-              </h1>
-              {(dateLabel || event?.location) && (
-                <div className="flex flex-wrap items-center gap-3 text-sm text-white/60" style={{ fontFamily: 'var(--font-space-sc)' }}>
-                  {dateLabel && <span>{dateLabel}</span>}
-                  {dateLabel && event?.location && <span>·</span>}
-                  {event?.location && <span>{event.location}</span>}
-                </div>
-              )}
-            </div>
-
-            {/* Countdown chip */}
+        <div className="relative z-10 max-w-6xl mx-auto px-6 py-12">
+          <p
+            style={{
+              fontFamily: 'var(--font-space-sc)',
+              fontSize: '10px',
+              fontWeight: 700,
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              color: '#DDB8F5',
+              marginBottom: '0.5rem',
+            }}
+          >
+            Schedule
+          </p>
+          <h1
+            style={{
+              fontFamily: 'var(--font-syne-sc)',
+              fontWeight: 700,
+              fontSize: 28,
+              color: 'white',
+              lineHeight: 1.2,
+              marginBottom: '0.75rem',
+            }}
+          >
+            Plan Your Day
+          </h1>
+          <div className="flex flex-wrap items-center gap-3">
+            {(dateLabel || event?.location) && (
+              <div className="flex flex-wrap items-center gap-2" style={{ fontFamily: 'var(--font-space-sc)', fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>
+                {dateLabel && <span>{dateLabel}</span>}
+                {dateLabel && event?.location && <span>·</span>}
+                {event?.location && <span>{event.location}</span>}
+              </div>
+            )}
             {countdownLabel && (
               <div
-                className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-bold"
+                className="flex-shrink-0 px-3 py-1 rounded-full text-xs font-bold"
                 style={{
-                  background: 'rgba(255,255,255,0.12)',
+                  background: 'rgba(255,255,255,0.1)',
                   border: `1.5px solid ${countdownColor}`,
                   color: countdownColor,
                   fontFamily: 'var(--font-syne-sc)',
-                  backdropFilter: 'blur(8px)',
                 }}
               >
                 {countdownLabel}
@@ -778,10 +786,7 @@ function ScheduleInner() {
                 <ul className="space-y-2.5">
                   {EMERGENCY_ITEMS.map((item, i) => (
                     <li key={i} className="flex items-center gap-2.5">
-                      <div
-                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                        style={{ background: '#DDB8F5' }}
-                      />
+                      <CheckCircle2 size={16} color="#4A0E6E" className="flex-shrink-0" />
                       <span
                         className="text-sm text-[#1A1A2E]/75"
                         style={{ fontFamily: 'var(--font-space-sc)' }}

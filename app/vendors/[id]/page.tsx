@@ -185,15 +185,15 @@ export default function VendorProfilePage() {
         className={`${syne.variable} ${spaceGrotesk.variable} min-h-screen bg-[#F8F4FC] flex flex-col`}
         style={{ fontFamily: 'var(--font-space-vp), system-ui, sans-serif' }}
       >
-        <nav className="sticky top-0 z-30 bg-[#F8F4FC] border-b border-[#EDE5F7] px-6 h-16 flex items-center gap-6">
+        <nav className="sticky top-0 z-30 px-6 h-16 flex items-center gap-6" style={{ background: '#1A1A2E' }}>
           <Link
             href={logoHref}
-            className="text-xl font-extrabold tracking-tight text-[#4A0E6E]"
+            className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity"
             style={{ fontFamily: 'var(--font-syne-vp)' }}
           >
-            evnti.
+            evnti<span style={{ color: '#DDB8F5' }}>.</span>
           </Link>
-          <Link href="/vendors" className="text-sm text-[#7C6B8A] hover:text-[#4A0E6E] transition-colors">
+          <Link href="/vendors" className="text-sm hover:opacity-80 transition-opacity" style={{ color: 'rgba(255,255,255,0.6)' }}>
             Back to vendors
           </Link>
         </nav>
@@ -231,28 +231,26 @@ export default function VendorProfilePage() {
       style={{ fontFamily: 'var(--font-space-vp), system-ui, sans-serif' }}
     >
       {/* ── TOP NAV ── */}
-      <nav className="sticky top-0 z-30 bg-[#F8F4FC]/95 border-b border-[#EDE5F7]"
-        style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
-      >
+      <nav className="sticky top-0 z-30" style={{ background: '#1A1A2E' }}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center gap-6">
           <button
             onClick={() => router.back()}
             aria-label="Go back"
-            className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-[#F3E8FF] transition-colors flex-shrink-0"
+            className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors flex-shrink-0"
           >
-            <ArrowLeft size={18} color="#DDB8F5" />
+            <ArrowLeft size={18} color="white" />
           </button>
           <Link
             href={logoHref}
-            className="text-xl font-extrabold tracking-tight text-[#4A0E6E] hover:opacity-80 transition-opacity"
+            className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity"
             style={{ fontFamily: 'var(--font-syne-vp)' }}
           >
-            evnti.
+            evnti<span style={{ color: '#DDB8F5' }}>.</span>
           </Link>
           <Link
             href="/vendors"
-            className="flex items-center gap-1.5 text-sm text-[#7C6B8A] hover:text-[#4A0E6E] transition-colors"
-            style={{ fontFamily: 'var(--font-space-vp)' }}
+            className="flex items-center gap-1.5 text-sm hover:opacity-80 transition-opacity"
+            style={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-space-vp)' }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
               <path d="M9 11L5 7l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />

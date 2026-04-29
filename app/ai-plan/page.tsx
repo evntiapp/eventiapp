@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { ArrowUp } from 'lucide-react'
 import { getSupabaseClient } from '@/lib/supabase'
 import { useLogoHref } from '@/app/hooks/useLogoHref'
 
@@ -26,18 +27,51 @@ interface EventContext {
 }
 
 const COLOR_MAP: Record<string, string> = {
-  'Midnight': '#1A1A2E',
-  'Lavender': '#DDB8F5',
-  'Champagne': '#F7E7CE',
-  'Gold': '#D4AC0D',
-  'White': '#FFFFFF',
-  'Black': '#000000',
-  'Blush': '#FFB6C1',
-  'Sage': '#B2C9AD',
-  'Navy': '#1B2A4A',
-  'Dusty Rose': '#C4817E',
-  'Emerald': '#006400',
-  'Burgundy': '#800020',
+  'midnight': '#1A1A2E',
+  'lavender': '#DDB8F5',
+  'champagne': '#F7E7CE',
+  'gold': '#D4AC0D',
+  'white': '#FFFFFF',
+  'black': '#000000',
+  'blush': '#FFB6C1',
+  'blush pink': '#FF91A4',
+  'sage': '#B2C9AD',
+  'navy': '#1B2A4A',
+  'dusty rose': '#C4817E',
+  'emerald': '#006400',
+  'burgundy': '#800020',
+  'terracotta': '#C0634F',
+  'rust': '#B7410E',
+  'coral': '#FF6B6B',
+  'peach': '#FFCBA4',
+  'ivory': '#F8F4ED',
+  'cream': '#FFFDD0',
+  'silver': '#C0C0C0',
+  'rose gold': '#B76E79',
+  'mauve': '#E0B0FF',
+  'lilac': '#C8A2C8',
+  'pink': '#FFC0CB',
+  'red': '#E53E3E',
+  'orange': '#ED8936',
+  'yellow': '#ECC94B',
+  'green': '#38A169',
+  'forest green': '#228B22',
+  'teal': '#319795',
+  'mint': '#98FF98',
+  'blue': '#4299E1',
+  'dusty blue': '#6699CC',
+  'indigo': '#667EEA',
+  'purple': '#9F7AEA',
+  'brown': '#8B4513',
+  'tan': '#D2B48C',
+  'charcoal': '#36454F',
+  'gray': '#9CA3AF',
+  'grey': '#9CA3AF',
+}
+
+function colorToHex(name: string): string {
+  if (name.startsWith('#')) return name
+  return COLOR_MAP[name.toLowerCase()] ?? '#9CA3AF'
 }
 
 // Requires NEXT_PUBLIC_UNSPLASH_ACCESS_KEY in .env.local
@@ -132,8 +166,8 @@ function MoodBoard({ keywords, colors }: { keywords: string[]; colors: string[] 
       {colors.length > 0 && (
         <div className="flex flex-wrap gap-3 mb-4">
           {colors.map((color) => {
-            const hex = COLOR_MAP[color] ?? '#9CA3AF'
-            const isWhite = color === 'White'
+            const hex = colorToHex(color)
+            const isWhite = color.toLowerCase() === 'white'
             return (
               <div
                 key={color}
@@ -198,17 +232,6 @@ function MoodBoard({ keywords, colors }: { keywords: string[]; colors: string[] 
             ))}
       </div>
 
-      <p
-        style={{
-          marginTop: 8,
-          fontSize: 10,
-          color: 'rgba(0,0,0,0.3)',
-          fontFamily: "'Space Grotesk', sans-serif",
-          textAlign: 'right',
-        }}
-      >
-        Photos via Unsplash
-      </p>
     </div>
   )
 }
@@ -229,19 +252,18 @@ const SUGGESTIONS = [
 
 function TypingIndicator() {
   return (
-    <div className="flex items-end gap-3 max-w-[560px]">
-      <div
-        className="rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5"
-        style={{ background: 'rgba(255,255,255,0.08)' }}
-      >
-        {[0, 1, 2].map((i) => (
-          <span
-            key={i}
-            className="block w-2 h-2 rounded-full bg-white/50"
-            style={{ animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }}
-          />
-        ))}
-      </div>
+    <div className="flex items-center gap-1.5 px-4 py-3 rounded-2xl" style={{
+      background: 'white',
+      boxShadow: '0 2px 8px rgba(74,14,110,0.08)',
+      width: 'fit-content',
+    }}>
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="block w-2 h-2 rounded-full"
+          style={{ background: '#DDB8F5', animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }}
+        />
+      ))}
     </div>
   )
 }
@@ -261,9 +283,9 @@ export default function AIPlanPage() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Fetch user's most recent event on load, then seed the opening message
+  // Load user context on mount — no API call, no credit consumption
   useEffect(() => {
-    async function fetchEvent() {
+    async function loadContext() {
       try {
         const supabase = getSupabaseClient()
         const { data: { user } } = await supabase.auth.getUser()
@@ -274,7 +296,6 @@ export default function AIPlanPage() {
 
         setUserId(user.id)
 
-        // Fetch credits
         const { data: userData } = await supabase
           .from('users')
           .select('eve_credits')
@@ -282,11 +303,7 @@ export default function AIPlanPage() {
           .single()
         const userCredits = userData?.eve_credits ?? 0
         setCredits(userCredits)
-        if (userCredits <= 0) {
-          setNoCredits(true)
-          setMessages([{ role: 'assistant', content: GENERIC_GREETING }])
-          return
-        }
+        if (userCredits <= 0) setNoCredits(true)
 
         const { data: eventData } = await supabase
           .from('events')
@@ -296,44 +313,24 @@ export default function AIPlanPage() {
           .limit(1)
           .single()
 
-        if (!eventData) {
+        if (eventData) {
+          setEventContext(eventData as EventContext)
+          setHasEventContext(true)
+          const type = (eventData as EventContext).event_type
+          setMessages([{
+            role: 'assistant',
+            content: type
+              ? `Hi! I'm Eve, your Evnti planning assistant. I can see you're planning a ${type} — I'm ready to help. What would you like to work on first?`
+              : GENERIC_GREETING,
+          }])
+        } else {
           setMessages([{ role: 'assistant', content: GENERIC_GREETING }])
-          return
-        }
-
-        setEventContext(eventData as EventContext)
-        setHasEventContext(true)
-        setLoading(true)
-
-        try {
-          const res = await fetch('/api/ai', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              messages: [{ role: 'user', content: 'Please give me an opening plan based on my event details.' }],
-              eventContext: eventData,
-              user_id: user.id,
-            }),
-          })
-          const json = await res.json()
-          if (json.error === 'no_credits') {
-            setNoCredits(true)
-            setCredits(0)
-            setMessages([{ role: 'assistant', content: GENERIC_GREETING }])
-          } else {
-            setCredits(c => (c !== null ? c - 1 : c))
-            setMessages([{ role: 'assistant', content: json.response ?? GENERIC_GREETING }])
-          }
-        } catch {
-          setMessages([{ role: 'assistant', content: GENERIC_GREETING }])
-        } finally {
-          setLoading(false)
         }
       } catch {
         setMessages([{ role: 'assistant', content: GENERIC_GREETING }])
       }
     }
-    fetchEvent()
+    loadContext()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -411,15 +408,15 @@ export default function AIPlanPage() {
 
       {/* Nav */}
       <nav
-        className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0"
-        style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+        className="sticky top-0 z-30 flex items-center justify-between px-6 h-16 flex-shrink-0"
+        style={{ background: '#1A1A2E', borderBottom: '1px solid rgba(255,255,255,0.08)' }}
       >
         <Link
           href={logoHref}
           className="text-white text-xl font-bold no-underline"
           style={{ fontFamily: "'Syne', sans-serif" }}
         >
-          evnti.
+          evnti<span style={{ color: '#DDB8F5' }}>.</span>
         </Link>
         <span className="text-white text-sm font-semibold" style={{ fontFamily: "'Syne', sans-serif" }}>
           Eve
@@ -427,21 +424,21 @@ export default function AIPlanPage() {
         <Link
           href="/dashboard"
           className="text-sm font-medium no-underline"
-          style={{ color: '#DDB8F5', fontFamily: "'Space Grotesk', sans-serif" }}
+          style={{ color: 'rgba(255,255,255,0.8)', fontFamily: "'Space Grotesk', sans-serif" }}
         >
           My Dashboard
         </Link>
       </nav>
 
       {/* Hero */}
-      <div className="px-6 pt-8 pb-5 text-center flex-shrink-0">
+      <div className="px-6 pt-6 pb-5 text-center flex-shrink-0">
         <h1
-          className="text-white mb-2"
-          style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 700, lineHeight: 1.2 }}
+          className="text-white mb-1"
+          style={{ fontFamily: "'Syne', sans-serif", fontSize: 24, fontWeight: 700, lineHeight: 1.2 }}
         >
           Meet Eve.
         </h1>
-        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
+        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>
           Your personal event planning assistant.
         </p>
       </div>
@@ -457,30 +454,31 @@ export default function AIPlanPage() {
       )}
 
       {/* Chat area */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
-        <div className="max-w-[720px] mx-auto flex flex-col gap-3">
+      <div className="flex-1 overflow-y-auto pb-4" style={{ background: '#F8F4FC' }}>
+        <div className="max-w-[720px] mx-auto flex flex-col gap-4 px-4 pt-4">
 
           {/* Suggestion chips — only when no user messages yet */}
           {hasOnlyGreeting && (
-            <div className="flex flex-wrap gap-2 justify-center mt-2 mb-4">
+            <div className="flex flex-wrap gap-2 justify-center mt-2 mb-2">
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s}
                   onClick={() => sendMessage(s)}
                   className="text-sm px-4 py-2 rounded-full border cursor-pointer transition-all duration-150"
                   style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    borderColor: 'rgba(221,184,245,0.3)',
-                    color: 'rgba(255,255,255,0.8)',
+                    background: 'white',
+                    borderColor: 'rgba(74,14,110,0.15)',
+                    color: '#4A0E6E',
                     fontFamily: "'Space Grotesk', sans-serif",
+                    boxShadow: '0 1px 4px rgba(74,14,110,0.07)',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(221,184,245,0.15)'
+                    e.currentTarget.style.background = '#F3E8FF'
                     e.currentTarget.style.borderColor = '#DDB8F5'
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
-                    e.currentTarget.style.borderColor = 'rgba(221,184,245,0.3)'
+                    e.currentTarget.style.background = 'white'
+                    e.currentTarget.style.borderColor = 'rgba(74,14,110,0.15)'
                   }}
                 >
                   {s}
@@ -493,26 +491,41 @@ export default function AIPlanPage() {
           {messages.map((msg, i) => (
             <div
               key={i}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
             >
+              {msg.role === 'assistant' && (
+                <span style={{
+                  fontSize: 10,
+                  color: '#7C6B8A',
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontWeight: 600,
+                  marginBottom: 4,
+                  letterSpacing: '0.04em',
+                }}>
+                  Eve
+                </span>
+              )}
               <div
-                className="max-w-[80%] text-sm leading-relaxed"
                 style={{
+                  maxWidth: msg.role === 'user' ? '80%' : '85%',
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontSize: 14,
+                  lineHeight: 1.6,
                   ...(msg.role === 'user'
                     ? {
                         background: '#4A0E6E',
                         color: 'white',
-                        borderRadius: '999px',
-                        padding: '10px 18px',
+                        borderRadius: 16,
+                        padding: '10px 16px',
                       }
                     : {
-                        background: 'rgba(255,255,255,0.08)',
-                        color: 'white',
-                        borderRadius: '16px',
-                        borderBottomLeftRadius: 4,
-                        padding: '12px 16px',
+                        background: 'white',
+                        color: '#1A1A2E',
+                        borderRadius: 16,
+                        padding: '14px 16px',
+                        boxShadow: '0 2px 8px rgba(74,14,110,0.08)',
+                        whiteSpace: 'pre-wrap',
                       }),
-                  fontFamily: "'Space Grotesk', sans-serif",
                 }}
               >
                 {msg.role === 'assistant' ? stripMarkdown(msg.content) : msg.content}
@@ -521,7 +534,14 @@ export default function AIPlanPage() {
           ))}
 
           {/* Typing indicator */}
-          {loading && <TypingIndicator />}
+          {loading && (
+            <div className="flex flex-col items-start">
+              <span style={{ fontSize: 10, color: '#7C6B8A', fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, marginBottom: 4, letterSpacing: '0.04em' }}>
+                Eve
+              </span>
+              <TypingIndicator />
+            </div>
+          )}
 
           <div ref={bottomRef} />
         </div>
@@ -529,77 +549,48 @@ export default function AIPlanPage() {
 
       {/* Input area */}
       <div
-        className="flex-shrink-0 px-4 pt-3 pb-5 border-t"
-        style={{ borderColor: 'rgba(255,255,255,0.08)', background: '#1A1A2E' }}
+        className="flex-shrink-0 px-4 pt-3 pb-5"
+        style={{ background: '#F8F4FC', borderTop: '1px solid rgba(74,14,110,0.08)' }}
       >
         <div className="max-w-[720px] mx-auto">
 
-          {/* Credit counter / no-credits banner */}
-          {noCredits ? (
-            <div className="mb-3">
-              <div
-                className="rounded-2xl px-5 py-5"
+          {/* No-credits banner */}
+          {noCredits && (
+            <div className="mb-3 rounded-2xl px-5 py-4" style={{
+              background: 'linear-gradient(135deg, rgba(74,14,110,0.08), rgba(107,31,154,0.06))',
+              border: '1.5px solid rgba(74,14,110,0.15)',
+            }}>
+              <p className="text-sm font-semibold mb-3" style={{ color: '#1A1A2E', fontFamily: "'Space Grotesk', sans-serif" }}>
+                You&apos;ve used all your Eve credits.
+              </p>
+              <a
+                href="https://buy.stripe.com/test_fZuaEY9ZQeLo5Ez6Ua4AU00"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full text-center py-2.5 rounded-full transition-opacity hover:opacity-90"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(74,14,110,0.6), rgba(107,31,154,0.5))',
-                  border: '1.5px solid rgba(221,184,245,0.35)',
+                  background: '#4A0E6E',
+                  color: 'white',
+                  fontFamily: "'Syne', sans-serif",
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  textDecoration: 'none',
                 }}
               >
-                <p
-                  className="text-base font-bold mb-4"
-                  style={{ color: '#DDB8F5', fontFamily: "'Space Grotesk', sans-serif", margin: '0 0 16px' }}
-                >
-                  You&apos;ve used all your Eve credits.
-                </p>
-                <a
-                  href="https://buy.stripe.com/test_fZuaEY9ZQeLo5Ez6Ua4AU00"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block w-full text-center py-3 rounded-full transition-opacity hover:opacity-90"
-                  style={{
-                    background: 'white',
-                    color: '#4A0E6E',
-                    fontFamily: 'var(--font-syne), sans-serif',
-                    fontWeight: 700,
-                    fontSize: '0.9rem',
-                    textDecoration: 'none',
-                  }}
-                >
-                  Get 100 more credits for $9.99 →
-                </a>
-                <p
-                  className="text-center mt-3"
-                  style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontFamily: "'Space Grotesk', sans-serif", margin: '12px 0 0' }}
-                >
-                  Credits are added automatically after payment.
-                </p>
-              </div>
-            </div>
-          ) : credits !== null && (
-            <div className="mb-2 text-right">
-              <p
-                className="text-xs"
-                style={{
-                  fontFamily: "'Space Grotesk', sans-serif",
-                  color: credits > 5 ? '#4ade80' : credits >= 3 ? '#fbbf24' : '#f87171',
-                }}
-              >
-                {credits} credit{credits !== 1 ? 's' : ''} remaining
-              </p>
-              <p className="text-xs mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'rgba(255,255,255,0.4)' }}>
-                10 free credits included. Need more?{' '}
-                <a
-                  href="https://buy.stripe.com/test_fZuaEY9ZQeLo5Ez6Ua4AU00"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: '#DDB8F5', textDecoration: 'underline' }}
-                >
-                  Get 100 credits for $9.99
-                </a>
-              </p>
+                Get 100 more credits — $9.99
+              </a>
             </div>
           )}
 
-          <div className="flex gap-2 items-end">
+          {/* Input row */}
+          <div
+            className="flex gap-2 items-center rounded-2xl px-4 py-2"
+            style={{
+              background: 'white',
+              boxShadow: '0 2px 12px rgba(74,14,110,0.08)',
+              border: '1px solid rgba(74,14,110,0.1)',
+            }}
+          >
             <textarea
               ref={inputRef}
               value={input}
@@ -608,13 +599,14 @@ export default function AIPlanPage() {
               placeholder={noCredits ? 'Upgrade to continue chatting with Eve...' : 'Ask me anything about your event...'}
               disabled={noCredits}
               rows={1}
-              className="flex-1 resize-none rounded-2xl px-4 py-3 text-sm outline-none border-0"
+              className="flex-1 resize-none bg-transparent outline-none border-0 text-sm"
               style={{
-                background: noCredits ? 'rgba(255,255,255,0.05)' : 'white',
-                color: noCredits ? 'rgba(255,255,255,0.3)' : '#1A1A2E',
+                color: noCredits ? '#9CA3AF' : '#1A1A2E',
                 fontFamily: "'Space Grotesk', sans-serif",
                 maxHeight: 120,
                 lineHeight: '1.5',
+                paddingTop: 6,
+                paddingBottom: 6,
                 cursor: noCredits ? 'not-allowed' : undefined,
               }}
               onInput={(e) => {
@@ -626,23 +618,29 @@ export default function AIPlanPage() {
             <button
               onClick={() => sendMessage(input)}
               disabled={!input.trim() || loading || noCredits}
-              className="flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center border-0 cursor-pointer transition-opacity duration-150"
+              className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center border-0 transition-opacity duration-150"
               style={{
                 background: '#4A0E6E',
-                opacity: !input.trim() || loading || noCredits ? 0.5 : 1,
-                cursor: noCredits ? 'not-allowed' : 'pointer',
+                opacity: !input.trim() || loading || noCredits ? 0.4 : 1,
+                cursor: !input.trim() || loading || noCredits ? 'not-allowed' : 'pointer',
               }}
               aria-label="Send message"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
+              <ArrowUp size={16} color="white" strokeWidth={2.5} />
             </button>
           </div>
-          <p className="text-center mt-2 text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            Evnti AI can make mistakes. Always confirm with vendors.
-          </p>
+
+          {/* Credits counter */}
+          {!noCredits && credits !== null && (
+            <div className="flex items-center justify-between mt-2 px-1">
+              <p style={{ fontSize: 11, color: '#7C6B8A', fontFamily: "'Space Grotesk', sans-serif" }}>
+                Evnti AI can make mistakes. Always confirm with vendors.
+              </p>
+              <p style={{ fontSize: 11, color: '#7C6B8A', fontFamily: "'Space Grotesk', sans-serif", flexShrink: 0 }}>
+                {credits} credit{credits !== 1 ? 's' : ''} left
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

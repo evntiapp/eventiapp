@@ -317,8 +317,37 @@ function MessagesInner() {
       className={`${syne.variable} ${spaceGrotesk.variable} min-h-screen bg-[#F8F4FC] flex flex-col`}
       style={{ fontFamily: 'var(--font-space-mg), system-ui, sans-serif' }}
     >
+      {/* ── NAV ── */}
+      <nav className="sticky top-0 z-30" style={{ background: '#1A1A2E' }}>
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <button
+              onClick={() => router.back()}
+              aria-label="Go back"
+              className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <ArrowLeft size={18} color="white" />
+            </button>
+            <Link
+              href={logoHref}
+              className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity"
+              style={{ fontFamily: 'var(--font-syne-mg)' }}
+            >
+              evnti<span style={{ color: '#DDB8F5' }}>.</span>
+            </Link>
+          </div>
+          <Link
+            href={isVendor ? '/vendor/dashboard' : '/dashboard'}
+            className="px-4 py-2 rounded-full text-xs font-semibold border border-white/20 text-white/70 hover:border-white/50 hover:text-white transition-colors flex-shrink-0"
+            style={{ fontFamily: 'var(--font-space-mg)' }}
+          >
+            My Dashboard
+          </Link>
+        </div>
+      </nav>
+
       {/* ── HERO ── */}
-      <div className="relative" style={{ minHeight: 200 }}>
+      <div className="relative" style={{ minHeight: 140 }}>
         <img
           src="/images/feature.jpg"
           alt=""
@@ -327,32 +356,7 @@ function MessagesInner() {
         <div className="absolute inset-0" style={{ background: 'rgba(26,26,46,0.85)' }} />
 
         <div className="relative z-10">
-          {/* Nav row inside hero */}
-          <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <button
-                onClick={() => router.back()}
-                aria-label="Go back"
-                className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-white/10 transition-colors"
-              >
-                <ArrowLeft size={18} color="#DDB8F5" />
-              </button>
-              <Link
-                href={logoHref}
-                className="text-xl font-extrabold tracking-tight text-white hover:opacity-80 transition-opacity"
-                style={{ fontFamily: 'var(--font-syne-mg)' }}
-              >
-                evnti.
-              </Link>
-            </div>
-            <Link
-              href={isVendor ? '/vendor/dashboard' : '/dashboard'}
-              className="px-4 py-2 rounded-full text-xs font-semibold border border-white/20 text-white/70 hover:border-white/50 hover:text-white transition-colors flex-shrink-0"
-              style={{ fontFamily: 'var(--font-space-mg)' }}
-            >
-              ← Dashboard
-            </Link>
-          </div>
+          <div />
 
           {/* Hero text */}
           <div className="max-w-6xl mx-auto px-6 pt-2 pb-8">

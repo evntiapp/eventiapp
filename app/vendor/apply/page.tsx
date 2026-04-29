@@ -159,8 +159,7 @@ export default function VendorApplyPage() {
         <div
           className="absolute inset-0"
           style={{
-            background:
-              'linear-gradient(to bottom, rgba(26,26,46,0.75) 0%, rgba(74,14,110,0.45) 45%, rgba(26,26,46,0.92) 100%)',
+            background: 'rgba(26,26,46,0.88)',
           }}
         />
 
@@ -220,7 +219,13 @@ export default function VendorApplyPage() {
 
       {/* ── RIGHT PANEL ── */}
       <div className="flex-1 lg:ml-[45%] min-h-screen bg-[#F8F4FC]">
-        <div className="max-w-lg mx-auto px-6 py-10 lg:py-16">
+        <div className="max-w-lg mx-auto px-4 py-10 lg:py-16">
+          <div style={{
+            background: 'white',
+            borderRadius: 24,
+            boxShadow: '0 4px 24px rgba(74,14,110,0.10)',
+            padding: 24,
+          }}>
           {submitted ? (
             /* ── SUCCESS STATE ── */
             <div className="flex flex-col items-center text-center py-16">
@@ -611,6 +616,7 @@ export default function VendorApplyPage() {
               </div>
             </>
           )}
+          </div>
         </div>
       </div>
     </div>
